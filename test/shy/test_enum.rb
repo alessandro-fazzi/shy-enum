@@ -78,4 +78,10 @@ class Shy::TestEnum < Minitest::Test # rubocop:disable Style/ClassAndModuleChild
     end
     assert_equal "private method `new' called for class Shy::Enum::Base", error.message
   end
+
+  def test_you_cannot_modify_an_enum_type_once_declared
+    assert_raises FrozenError do
+      Color::PINK.instance_variable_set(:@value, "Hacked")
+    end
+  end
 end

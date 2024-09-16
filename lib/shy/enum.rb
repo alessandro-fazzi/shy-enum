@@ -30,6 +30,7 @@ module Shy
         @name = name
         @value = name.to_s.downcase
         @ord = self.class.registry.size.next
+        freeze
         self.class.const_set name, self
       end
       private_class_method :new
