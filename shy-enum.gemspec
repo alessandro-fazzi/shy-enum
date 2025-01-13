@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = ""
   spec.homepage = "https://github.com/alessandro-fazzi/shy-enum"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.3.0"
+  spec.required_ruby_version = ">= 3.4.1"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/alessandro-fazzi/shy-enum"
@@ -34,4 +34,5 @@ Gem::Specification.new do |spec|
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
   spec.metadata["rubygems_mfa_required"] = "true"
+  # Remove YARD dependency
 end

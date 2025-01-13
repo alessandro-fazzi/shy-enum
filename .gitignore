@@ -6,3 +6,10 @@
 /pkg/
 /spec/reports/
 /tmp/
+
+# YARD documentation
+/docs
+.yardoc
+
+# RDoc documentation
+/docs
