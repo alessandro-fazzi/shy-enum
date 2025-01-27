@@ -37,7 +37,7 @@ module Shy
     # ```
     class Base
       class << self
-        # All enum members
+        # All enum members (aliased as `all`)
         attr_reader :registry
 
         # Returns the complete registry of entries
@@ -45,7 +45,7 @@ module Shy
           registry
         end
 
-        # Returns all enum values as strings
+        # Returns all enum values
         def values
           all.map(&:value)
         end
@@ -61,14 +61,12 @@ module Shy
           raise(Error, "Unknown member")
         end
 
-        # :nodoc:
-        def inherited(subclass)
+        def inherited(subclass) # :nodoc:
           super
           subclass.instance_variable_set(:@registry, [])
         end
 
-        # :nodoc:
-        def const_added(name)
+        def const_added(name) # :nodoc:
           object = const_get(name, false)
 
           return unless object.is_a?(self)
@@ -99,7 +97,8 @@ module Shy
         after_initialize
       end
 
-      # Called after initialization. Override in subclasses to customize.
+      # Called after initialization. Override in subclasses to refine you initialization
+      # without the need to handle calling `super`.
       def after_initialize; end
 
       private_class_method :new

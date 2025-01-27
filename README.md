@@ -84,6 +84,8 @@ Color::BLUE.value #=> "blue"
 
 ### Comparing enum members
 
+The comparison is based on the enum member's ordinal position, which is assigned in declaration order.
+
 ```ruby
 class Status < Shy::Enum::Base
   DRAFT = new
@@ -97,11 +99,10 @@ Status::DRAFT < Status::PUBLISHED    #=> true
 Status::PUBLISHED > Status::DRAFT    #=> true
 Status::ARCHIVED > Status::PUBLISHED #=> true
 Status::DRAFT < Status::ARCHIVED    #=> true
-
-# Enum members are ordered by their declaration order
 ```
 
 ### Using in case statements
+
 Enum members can be used in case statements thanks to Ruby's `===` operator. Here's how it works:
 
 ```ruby
@@ -131,11 +132,9 @@ Status::PUBLISHED === status #=> true
 Status::DRAFT === status    #=> false
 ```
 
-The comparison is based on the enum member's ordinal position, which is assigned in declaration order. This makes case statements a natural way to handle different enum states in your code.
-
 ### Exceptions
 
-The following exceptions can be raised:
+The following exceptions could be raised:
 
 ```ruby
 # When trying to add a new member to a frozen enum
