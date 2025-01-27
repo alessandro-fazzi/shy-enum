@@ -3,7 +3,7 @@
 require "test_helper"
 
 module Shy
-  class TestHasEnum < Minitest::Test
+  class HasEnumTest < Minitest::Test
     class Color < Shy::Enum::Base
       PINK = new
       RED = new
@@ -47,7 +47,7 @@ module Shy
       error = assert_raises Shy::Enum::Error do
         @subject.color = String.new("Wooof")
       end
-      assert_equal "Type error. Enum type must be a Shy::TestHasEnum::Color", error.message
+      assert_equal "Type error. Enum type must be a Shy::HasEnumTest::Color", error.message
     end
 
     def test_setting_enum_with_bang_method

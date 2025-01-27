@@ -3,7 +3,7 @@
 require "test_helper"
 
 module Shy
-  class TestColorEnum < Minitest::Test
+  class ColorEnumTest < Minitest::Test
     class Subject < Shy::Enum::Base
       PINK = new
       RED = new
@@ -84,7 +84,7 @@ module Shy
 
     def test_exception_when_duplicated_member_by_const_added
       OpenEnum.const_set(:FOO, OpenEnum.send(:new))
-      warning_message = /warning: already initialized constant Shy::TestColorEnum::OpenEnum::FOO/
+      warning_message = /warning: already initialized constant Shy::ColorEnumTest::OpenEnum::FOO/
       error = nil
 
       assert_output(nil, warning_message) do
@@ -128,6 +128,17 @@ module Shy
                end
 
       assert_equal "violet", result
+    end
+
+    class SubSubject < Subject
+      YELLOW = new
+      ORANGE = new
+
+      freeze
+    end
+
+    def test_enum_can_be_subclassed
+      assert_equal %w[pink red violet yellow orange], SubSubject.values
     end
   end
 end
