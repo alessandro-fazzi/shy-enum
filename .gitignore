@@ -13,3 +13,4 @@
 
 # RDoc documentation
 /docs
+.vscode/settings.json
