@@ -22,7 +22,7 @@ module Shy
       @subject = Subject.new
     end
 
-    def test_generated_methods
+    def test_generated_methods # rubocop:disable Minitest/MultipleAssertions
       assert_respond_to @subject, :pink?
       assert_respond_to @subject, :pink!
       assert_respond_to @subject, :red?

@@ -61,9 +61,14 @@ module Shy
           raise(Error, "Unknown member")
         end
 
+        # Called when a class inherits from this class. Ensures the registry of enum values
+        # is properly copied to the subclass to maintain independent registries for each
+        # enum class hierarchy.
+        #
+        # * `subclass` - The class that is inheriting from this class
         def inherited(subclass) # :nodoc:
           super
-          subclass.instance_variable_set(:@registry, [])
+          subclass.instance_variable_set(:@registry, (registry && registry.dup) || [])
         end
 
         def const_added(name) # :nodoc:

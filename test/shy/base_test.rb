@@ -20,7 +20,7 @@ module Shy
       refute_nil ::Shy::Enum::VERSION
     end
 
-    def test_enum_comparisons
+    def test_enum_comparisons # rubocop:disable Minitest/MultipleAssertions
       assert_operator @subject::PINK, :<, @subject::RED
       assert_operator @subject::PINK, :<, @subject::VIOLET
       assert_operator @subject::RED, :>, @subject::PINK
@@ -130,7 +130,7 @@ module Shy
       assert_equal "violet", result
     end
 
-    class SubSubject < Subject
+    class SubjectSubclass < Subject
       YELLOW = new
       ORANGE = new
 
@@ -138,7 +138,7 @@ module Shy
     end
 
     def test_enum_can_be_subclassed
-      assert_equal %w[pink red violet yellow orange], SubSubject.values
+      assert_equal %w[pink red violet yellow orange], SubjectSubclass.values
     end
   end
 end
