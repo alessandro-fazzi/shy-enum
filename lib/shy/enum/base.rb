@@ -120,9 +120,9 @@ module Shy
 
       # Compares enum members based on their ordinal position
       #
-      # Raises ArgumentError if the other object is not comparable
+      # Returns nil if the other object is not comparable
       def <=>(other)
-        raise ArgumentError, "comparison of #{self.class} with #{other.inspect} failed" unless other.is_a?(self.class)
+        return nil unless other.is_a?(self.class)
 
         ordinal <=> other.ordinal
       end

@@ -44,10 +44,8 @@ module Shy
                    [@subject::VIOLET, @subject::PINK, @subject::RED].sort
     end
 
-    def test_spaceship_operator_raises_when_other_is_not_comparable
-      assert_raises ArgumentError do
-        @subject::PINK <=> "not an enum"
-      end
+    def test_spaceship_operator_returns_nil_when_other_is_not_comparable
+      assert_nil(@subject::PINK <=> "not an enum")
     end
 
     def test_enum_registry
@@ -177,6 +175,12 @@ module Shy
 
     def test_member_prints_its_value_when_converted_to_string
       assert_equal "pink", @subject::PINK.to_s
+    end
+
+    def test_equality_with_other_type_returns_false
+      # Order of the compared objects is strict: swapping the two would exercise
+      # `String#==` instead of our implementation.
+      refute_equal @subject::PINK, "pink"
     end
 
     class IntegerSubject < Shy::Enum::Base
