@@ -79,7 +79,7 @@ module Shy
           object.name = name.to_s
           object.value ||= name.to_s.downcase
 
-          raise Error, "Duplicated member" if registry.find { _1.value == object.value }
+          raise Error, "Duplicated member" if registry.find { it.value == object.value }
 
           object.freeze
 
