@@ -12,6 +12,10 @@ module Shy
       freeze
     end
 
+    # Ease some tests avoiding to freeze
+    class OpenEnum < Shy::Enum::Base
+    end
+
     def setup
       @subject = Subject
     end
@@ -20,13 +24,30 @@ module Shy
       refute_nil ::Shy::Enum::VERSION
     end
 
-    def test_enum_comparisons # rubocop:disable Minitest/MultipleAssertions
+    def test_enum_comparisons
       assert_operator @subject::PINK, :<, @subject::RED
       assert_operator @subject::PINK, :<, @subject::VIOLET
       assert_operator @subject::RED, :>, @subject::PINK
       assert_operator @subject::RED, :<, @subject::VIOLET
       assert_operator @subject::VIOLET, :>, @subject::PINK
       assert_operator @subject::VIOLET, :>, @subject::RED
+    end
+
+    def test_spaceship_operator_returns_ordinal_comparison
+      assert_equal(-1, @subject::PINK <=> @subject::RED)
+      assert_equal(0, @subject::PINK <=> @subject::PINK) # rubocop:disable Lint/BinaryOperatorWithIdenticalOperands
+      assert_equal(1, @subject::VIOLET <=> @subject::RED)
+    end
+
+    def test_enum_is_sortable
+      assert_equal [@subject::PINK, @subject::RED, @subject::VIOLET],
+                   [@subject::VIOLET, @subject::PINK, @subject::RED].sort
+    end
+
+    def test_spaceship_operator_raises_when_other_is_not_comparable
+      assert_raises ArgumentError do
+        @subject::PINK <=> "not an enum"
+      end
     end
 
     def test_enum_registry
@@ -79,7 +100,10 @@ module Shy
       assert_equal "Unknown member", error.message
     end
 
-    class OpenEnum < Shy::Enum::Base
+    def test_unrelated_constant_added_to_enum_is_ignored
+      OpenEnum.const_set(:UNRELATED, "just a string")
+
+      refute_includes OpenEnum.registry.map(&:name), "UNRELATED"
     end
 
     def test_exception_when_duplicated_member_by_const_added
@@ -139,6 +163,20 @@ module Shy
 
     def test_enum_can_be_subclassed
       assert_equal %w[pink red violet yellow orange], SubjectSubclass.values
+    end
+
+    def test_subclassing_does_not_affect_the_original_enum
+      assert_equal %w[pink red violet], Subject.values
+      refute_includes Subject.values, "yellow"
+      refute_includes Subject.values, "orange"
+    end
+
+    def test_how_member_is_inspected
+      assert_equal "Shy::ColorEnumTest::Subject::PINK", @subject::PINK.inspect
+    end
+
+    def test_member_prints_its_value_when_converted_to_string
+      assert_equal "pink", @subject::PINK.to_s
     end
   end
 end

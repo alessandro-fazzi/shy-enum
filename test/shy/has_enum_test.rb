@@ -22,7 +22,7 @@ module Shy
       @subject = Subject.new
     end
 
-    def test_generated_methods # rubocop:disable Minitest/MultipleAssertions
+    def test_generated_methods
       assert_respond_to @subject, :pink?
       assert_respond_to @subject, :pink!
       assert_respond_to @subject, :red?
@@ -60,6 +60,26 @@ module Shy
       @subject.pink!
 
       assert_predicate @subject, :pink?
+    end
+
+    class ::TopLevelSeason < Shy::Enum::Base
+      SPRING = new
+
+      freeze
+    end
+
+    class TopLevelSubject
+      include Shy::Enum::HasEnum
+
+      enum ::TopLevelSeason
+    end
+
+    def test_generated_method_names_for_a_top_level_enum_class
+      subject = TopLevelSubject.new
+
+      assert_respond_to subject, :toplevelseason
+      assert_respond_to subject, :toplevelseason=
+      assert_respond_to subject, :spring?
     end
   end
 end

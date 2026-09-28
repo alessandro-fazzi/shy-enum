@@ -122,6 +122,8 @@ module Shy
       #
       # Raises ArgumentError if the other object is not comparable
       def <=>(other)
+        raise ArgumentError, "comparison of #{self.class} with #{other.inspect} failed" unless other.is_a?(self.class)
+
         ordinal <=> other.ordinal
       end
       include Comparable
