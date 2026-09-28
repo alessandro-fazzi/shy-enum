@@ -1,0 +1,3 @@
+[tools]
+ruby = { version = '{{ read_file(path=".ruby-version") | trim }}' }
+"gem:ruby-lsp" = "latest"
