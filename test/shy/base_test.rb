@@ -178,5 +178,15 @@ module Shy
     def test_member_prints_its_value_when_converted_to_string
       assert_equal "pink", @subject::PINK.to_s
     end
+
+    class IntegerSubject < Shy::Enum::Base
+      ONE = new(1)
+
+      freeze
+    end
+
+    def test_to_s_returns_a_string_with_integer_value
+      assert_kind_of String, IntegerSubject::ONE.to_s
+    end
   end
 end

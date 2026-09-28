@@ -110,7 +110,7 @@ module Shy
 
       # Returns the value as a string
       def to_s
-        value
+        value.to_s
       end
 
       # Returns a string representation of the enum member
