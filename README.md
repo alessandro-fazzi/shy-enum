@@ -179,6 +179,22 @@ Status::PUBLISHED === status #=> true
 Status::DRAFT === status    #=> false
 ```
 
+### Iterating members
+
+The enum class is `Enumerable` over its members, in declaration order.
+
+```ruby
+Color.each { puts it.name }    # prints PINK, RED, VIOLET
+Color.map(&:value)             #=> ["pink", "red", "violet"]
+Color.size                     #=> 3
+Color.member?(Color::RED)      #=> true
+Color.member?("red")           #=> true
+Color.member?("brown")         #=> false
+```
+
+`member?` checks members and values like `[]` does. `include?` keeps its `Module`
+meaning (included modules) and raises `TypeError` when given anything else.
+
 ### Looking up members
 
 `[]` finds a member by member or by value and returns `nil` when nothing matches.
