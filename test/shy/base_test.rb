@@ -188,6 +188,32 @@ module Shy
       assert_equal @subject.method(:fetch), @subject.method(:cast)
     end
 
+    class CastingSubject < Shy::Enum::Base
+      ONE = new(1)
+
+      def self.before_cast(obj) = Integer(obj, exception: false)
+      private_class_method :before_cast
+
+      freeze
+    end
+
+    def test_before_cast_converts_the_looked_up_value
+      assert_same CastingSubject::ONE, CastingSubject["1"]
+    end
+
+    def test_before_cast_is_not_applied_to_members
+      assert_same CastingSubject::ONE, CastingSubject[CastingSubject::ONE]
+    end
+
+    def test_fetch_reports_the_value_before_cast
+      error = assert_raises(Shy::Enum::Error) { CastingSubject.fetch("2") }
+      assert_equal 'Unknown member for value "2"', error.message
+    end
+
+    def test_before_cast_is_private
+      assert_raises(NoMethodError) { @subject.before_cast("pink") }
+    end
+
     def test_unrelated_constant_added_to_enum_is_ignored
       OpenEnum.const_set(:UNRELATED, "just a string")
 

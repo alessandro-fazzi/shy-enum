@@ -132,6 +132,37 @@ Status::PUBLISHED === status #=> true
 Status::DRAFT === status    #=> false
 ```
 
+### Looking up members
+
+`[]` finds a member by member or by value and returns `nil` when nothing matches.
+`fetch` (aliased as `cast`) does the same, but raises `Shy::Enum::Error`.
+
+```ruby
+Color["red"]          #=> Color::RED
+Color[Color::RED]     #=> Color::RED
+Color["brown"]        #=> nil
+Color.fetch("red")    #=> Color::RED
+Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Error)
+```
+
+Values are compared strictly, so `Status["1"]` doesn't find a member whose value is `1`.
+To convert the input before the lookup, e.g. strings coming from request params,
+override the private `before_cast` class method. Define it before calling `freeze`:
+
+```ruby
+class Status < Shy::Enum::Base
+  DRAFT = new(0)
+  PUBLISHED = new(1)
+
+  def self.before_cast(obj) = Integer(obj, exception: false)
+  private_class_method :before_cast
+
+  freeze
+end
+
+Status["1"] #=> Status::PUBLISHED
+```
+
 ### Exceptions
 
 The following exceptions could be raised:

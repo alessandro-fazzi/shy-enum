@@ -100,7 +100,8 @@ module Shy
         def [](obj)
           return find { it == obj } if obj.is_a?(self)
 
-          find { it.value == obj }
+          value = before_cast(obj)
+          find { it.value == value }
         end
 
         # Finds an enum member by member or value, like `[]`
@@ -136,6 +137,22 @@ module Shy
           object.freeze
 
           registry << object
+        end
+
+        private
+
+        # Converts the object looked up by `[]` and `fetch` before comparing it
+        # with the values. Enum members are not converted.
+        #
+        # Returns the object unchanged; override it to accept other inputs, e.g.
+        # strings for integer values:
+        #
+        # ```
+        # def self.before_cast(obj) = Integer(obj, exception: false)
+        # private_class_method :before_cast
+        # ```
+        def before_cast(obj)
+          obj
         end
       end
 
