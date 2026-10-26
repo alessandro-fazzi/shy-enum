@@ -354,7 +354,31 @@ module Shy
     end
 
     def test_how_member_is_inspected
-      assert_equal "Shy::ColorEnumTest::Subject::PINK", @subject::PINK.inspect
+      assert_equal '#<Shy::ColorEnumTest::Subject::PINK value="pink">', @subject::PINK.inspect
+    end
+
+    def test_inspect_shows_the_value_type
+      # integer is not represented as string
+      assert_equal "#<Shy::ColorEnumTest::IntegerSubject::ONE value=1>", IntegerSubject::ONE.inspect
+    end
+
+    def test_inspect_shows_the_instance_variables_of_the_member
+      assert_equal '#<Shy::ColorEnumTest::AttributesSubject::GREEN value="verde", hex="00ff00", upcased_hex="00FF00">',
+                   AttributesSubject::GREEN.inspect
+    end
+
+    class QuietSubject < Shy::Enum::Base
+      SECRET = new(token: "abc")
+
+      private
+
+      def instance_variables_to_inspect = %i[@value]
+
+      freeze
+    end
+
+    def test_inspect_honors_instance_variables_to_inspect
+      assert_equal '#<Shy::ColorEnumTest::QuietSubject::SECRET value="secret">', QuietSubject::SECRET.inspect
     end
 
     def test_member_prints_its_value_when_converted_to_string

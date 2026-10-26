@@ -198,9 +198,16 @@ module Shy
         value.to_s
       end
 
-      # Returns a string representation of the enum member
+      # Returns a string representation of the enum member, with its value and
+      # extra attributes, e.g. `#<Color::RED value="red", hex="ff0000">`
+      #
+      # Override the private `instance_variables_to_inspect` to choose the
+      # instance variables to show.
       def inspect
-        "#{self.class}::#{name}"
+        fields = instance_variables_to_inspect.map do |ivar|
+          "#{ivar.to_s.delete_prefix("@")}=#{instance_variable_get(ivar).inspect}"
+        end
+        "#<#{self.class}::#{name} #{fields.join(", ")}>"
       end
 
       # Compares enum members based on their ordinal position
@@ -214,6 +221,10 @@ module Shy
       include Comparable
 
       private
+
+      def instance_variables_to_inspect
+        instance_variables - %i[@name @ordinal]
+      end
 
       def define_attribute(key, attribute)
         if Base.method_defined?(key) || Base.private_method_defined?(key, false)

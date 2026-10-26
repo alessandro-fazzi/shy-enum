@@ -25,11 +25,11 @@ end
 flower = Flower.new
 flower.color #=> nil
 flower.pink!
-flower.color #=> #<Color:0x000000011fcf84e0 @name=:PINK, @ord=1, @value="pink">
+flower.color #=> #<Color::PINK value="pink">
 flower.pink? #=> true
 flower.violet? #=> false
 flower.color = Color::RED
-flower.color #=> #<Color:0x00000001046a65a8 @name=:RED, @ord=2, @value="red">
+flower.color #=> #<Color::RED value="red">
 
 Color.send(:new, :BROWN) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
 ```
@@ -87,6 +87,31 @@ Color::BLUE.hex     #=> nil
 
 Attributes are already set when `after_initialize` runs. An attribute can't override
 an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`.
+
+### Inspecting members
+
+`inspect` shows the value and the instance variables of the member, like `Data`:
+
+```ruby
+Color::RED.inspect   #=> #<Color::RED value="red", hex="ff0000">
+Color::BLUE.inspect  #=> #<Color::BLUE value="blue">
+```
+
+To choose what to show, override the private `instance_variables_to_inspect`:
+
+```ruby
+class ApiKey < Shy::Enum::Base
+  PUBLIC = new(token: "abc")
+
+  private
+
+  def instance_variables_to_inspect = %i[@value]
+
+  freeze
+end
+
+ApiKey::PUBLIC.inspect #=> #<ApiKey::PUBLIC value="public">
+```
 
 ### Default values
 
