@@ -67,6 +67,18 @@ module Shy
           Module.instance_method(:include?).bind_call(self, mod)
         end
 
+        # Checks whether the enum contains the given member or value
+        #
+        # * `obj` - An enum member, or the value of an enum member
+        #
+        # Instances of the enum are looked up among the members, any other object
+        # among the values.
+        def member?(obj)
+          return super if obj.is_a?(self)
+
+          values.include?(obj)
+        end
+
         # Returns the complete registry of entries
         def all
           registry

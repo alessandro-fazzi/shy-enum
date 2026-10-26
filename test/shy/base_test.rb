@@ -102,6 +102,27 @@ module Shy
       assert_match(/member\?/, error.message)
     end
 
+    # RuboCop suggests assert_includes, which relies on `include?`: on enums it
+    # checks for included modules, so `member?` must be asserted directly.
+    # rubocop:disable Minitest/AssertIncludes, Minitest/RefuteIncludes
+    def test_member_with_a_member
+      assert Subject.member?(Subject::PINK)
+    end
+
+    def test_member_with_a_member_of_a_subclass
+      refute Subject.member?(SubjectSubclass::YELLOW)
+    end
+
+    def test_member_with_a_value
+      assert Subject.member?("pink")
+      refute Subject.member?("brown")
+    end
+
+    def test_member_with_a_member_of_another_enum_sharing_a_value
+      refute Subject.member?(OtherColor::PINK)
+    end
+    # rubocop:enable Minitest/AssertIncludes, Minitest/RefuteIncludes
+
     def test_enum_values
       assert_equal %w[pink red violet], @subject.values
     end
@@ -226,6 +247,12 @@ module Shy
       # Order of the compared objects is strict: swapping the two would exercise
       # `String#==` instead of our implementation.
       refute_equal @subject::PINK, "pink"
+    end
+
+    class OtherColor < Shy::Enum::Base
+      PINK = new
+
+      freeze
     end
 
     class IntegerSubject < Shy::Enum::Base
