@@ -75,6 +75,15 @@ module Shy
       assert_equal @subject.all, enumerator.to_a
     end
 
+    def test_size_returns_the_number_of_members
+      assert_equal 3, @subject.size
+      assert_equal 5, SubjectSubclass.size
+    end
+
+    def test_enumerator_knows_its_size_without_iterating
+      assert_equal 3, @subject.each.size
+    end
+
     def test_enum_is_enumerable
       assert_kind_of Enumerable, @subject
       assert_equal %w[PINK RED VIOLET], @subject.map(&:name)

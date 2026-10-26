@@ -46,10 +46,14 @@ module Shy
         #
         # Returns an Enumerator if no block is given
         def each(&)
-          return enum_for(__method__) unless block_given?
+          return enum_for(__method__) { size } unless block_given?
 
           registry.each(&)
           self
+        end
+
+        def size
+          registry.size
         end
 
         # Including Enumerable shadows `Module#include?`: restore the idiomatic
