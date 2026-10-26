@@ -152,6 +152,10 @@ class Status < Shy::Enum::Base
   #=> Shy::Enum::Error "Duplicated member"
 end
 
+# When trying to fetch a non-existent enum member
+Color.fetch("brown")
+#=> Shy::Enum::Error "Unknown member for value \"brown\""
+
 # When trying to modify a frozen enum member
 Color::RED.instance_variable_set(:@value, "new_value")
 #=> FrozenError "can't modify frozen ...""

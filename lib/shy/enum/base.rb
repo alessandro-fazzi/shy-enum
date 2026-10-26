@@ -103,6 +103,16 @@ module Shy
           find { it.value == obj }
         end
 
+        # Finds an enum member by member or value, like `[]`
+        #
+        # * `obj` - An enum member, or the value of an enum member
+        #
+        # Raises Error if the enum member is not found
+        def fetch(obj)
+          self[obj] || raise(Error, "Unknown member for value #{obj.inspect}")
+        end
+        alias cast fetch
+
         # Called when a class inherits from this class. Ensures the registry of enum values
         # is properly copied to the subclass to maintain independent registries for each
         # enum class hierarchy.

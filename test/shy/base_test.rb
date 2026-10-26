@@ -174,6 +174,20 @@ module Shy
       assert_nil IntegerSubject["1"]
     end
 
+    def test_fetch_with_a_member_or_a_value
+      assert_same @subject::PINK, @subject.fetch(@subject::PINK)
+      assert_same @subject::PINK, @subject.fetch("pink")
+    end
+
+    def test_fetch_raises_with_the_looked_up_value
+      error = assert_raises(Shy::Enum::Error) { IntegerSubject.fetch("1") }
+      assert_equal 'Unknown member for value "1"', error.message
+    end
+
+    def test_cast_is_an_alias_of_fetch
+      assert_equal @subject.method(:fetch), @subject.method(:cast)
+    end
+
     def test_unrelated_constant_added_to_enum_is_ignored
       OpenEnum.const_set(:UNRELATED, "just a string")
 
