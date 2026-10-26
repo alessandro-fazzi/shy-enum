@@ -89,15 +89,18 @@ module Shy
           all.map(&:value)
         end
 
-        # Finds an enum member by its name
+        # Finds an enum member by member or value
         #
-        # * `name` - The name of the enum member as String or Symbol
+        # * `obj` - An enum member, or the value of an enum member
         #
-        # Raises Error if the enum member is not found
-        def [](name)
-          const_get(name, false)
-        rescue NameError
-          raise(Error, "Unknown member")
+        # Instances of the enum are looked up among the members, any other object
+        # among the values.
+        #
+        # Returns nil if the enum member is not found
+        def [](obj)
+          return find { it == obj } if obj.is_a?(self)
+
+          find { it.value == obj }
         end
 
         # Called when a class inherits from this class. Ensures the registry of enum values

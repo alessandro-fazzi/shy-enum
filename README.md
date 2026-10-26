@@ -152,10 +152,6 @@ class Status < Shy::Enum::Base
   #=> Shy::Enum::Error "Duplicated member"
 end
 
-# When trying to cast a non-existent enum value
-Color[:NON_EXISTENT]
-#=> Shy::Enum::Error "Enum value not found"
-
 # When trying to modify a frozen enum member
 Color::RED.instance_variable_set(:@value, "new_value")
 #=> FrozenError "can't modify frozen ...""

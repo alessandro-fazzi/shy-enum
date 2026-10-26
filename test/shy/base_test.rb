@@ -147,21 +147,31 @@ module Shy
       end
     end
 
-    def test_enum_casting_with_brackets
-      assert_equal @subject::PINK, @subject[:PINK]
-
-      assert_raises Shy::Enum::Error do
-        @subject[:NON_EXISTENT]
-      end
+    def test_brackets_with_a_member
+      assert_same @subject::PINK, @subject[@subject::PINK]
     end
 
-    def test_enum_casting_with_string
-      assert_equal @subject::PINK, @subject["PINK"]
+    def test_brackets_with_a_member_of_a_subclass
+      assert_nil @subject[SubjectSubclass::YELLOW]
+    end
 
-      error = assert_raises Shy::Enum::Error do
-        @subject["NON_EXISTENT"]
-      end
-      assert_equal "Unknown member", error.message
+    def test_brackets_with_a_value
+      assert_same @subject::PINK, @subject["pink"]
+      assert_nil @subject["brown"]
+    end
+
+    def test_brackets_with_a_member_of_another_enum_sharing_a_value
+      assert_nil @subject[OtherColor::PINK]
+    end
+
+    def test_brackets_do_not_look_up_by_name
+      assert_nil @subject[:PINK]
+      assert_nil @subject["PINK"]
+    end
+
+    def test_brackets_compare_values_strictly
+      assert_same IntegerSubject::ONE, IntegerSubject[1]
+      assert_nil IntegerSubject["1"]
     end
 
     def test_unrelated_constant_added_to_enum_is_ignored
