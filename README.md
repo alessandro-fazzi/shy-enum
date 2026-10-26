@@ -66,6 +66,28 @@ Role::USER.value #=> "regular_user"
 Role::GUEST.value #=> "guest"
 ```
 
+### Extra attributes
+
+Keyword arguments passed to `new` become attributes with a reader, like a Struct.
+Members without an attribute return `nil`; the value stays the positional argument.
+
+```ruby
+class Color < Shy::Enum::Base
+  RED = new(hex: "ff0000")
+  GREEN = new("verde", hex: "00ff00")
+  BLUE = new
+
+  freeze
+end
+
+Color::RED.hex      #=> "ff0000"
+Color::GREEN.value  #=> "verde"
+Color::BLUE.hex     #=> nil
+```
+
+Attributes are already set when `after_initialize` runs. An attribute can't override
+an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`.
+
 ### Default values
 
 ```ruby

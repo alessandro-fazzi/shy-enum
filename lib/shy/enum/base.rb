@@ -35,6 +35,21 @@ module Shy
     #   freeze
     # end
     # ```
+    #
+    # ## With extra attributes
+    #
+    # Keyword arguments become attributes with a reader, like a Struct. Members
+    # without an attribute return nil.
+    #
+    # ```
+    # class Color < Shy::Enum::Base
+    #   RED = new(hex: "ff0000")
+    #   GREEN = new("verde", hex: "00ff00")
+    #   freeze
+    # end
+    #
+    # Color::RED.hex #=> "ff0000"
+    # ```
     class Base
       class << self
         include Enumerable
@@ -163,16 +178,17 @@ module Shy
       # The name of the enum member
       attr_accessor :name
 
-      def initialize(value = nil)
+      def initialize(value = nil, **attributes)
         raise(Error, "Can't add new values to a closed Enum") if self.class.frozen?
 
         @value = value
         @ordinal = self.class.registry.size.next
+        attributes.each { |key, attribute| define_attribute(key, attribute) }
         after_initialize
       end
 
       # Called after initialization. Override in subclasses to refine you initialization
-      # without the need to handle calling `super`.
+      # without the need to handle calling `super`. Extra attributes are already set.
       def after_initialize; end
 
       private_class_method :new
@@ -196,6 +212,17 @@ module Shy
         ordinal <=> other.ordinal
       end
       include Comparable
+
+      private
+
+      def define_attribute(key, attribute)
+        if Base.method_defined?(key) || Base.private_method_defined?(key, false)
+          raise(Error, "Attribute `#{key}` conflicts with #{Base.instance_method(key).owner}##{key}")
+        end
+
+        self.class.attr_reader(key) unless self.class.method_defined?(key)
+        instance_variable_set(:"@#{key}", attribute)
+      end
     end
   end
 end

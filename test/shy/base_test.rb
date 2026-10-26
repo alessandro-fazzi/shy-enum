@@ -214,6 +214,74 @@ module Shy
       assert_raises(NoMethodError) { @subject.before_cast("pink") }
     end
 
+    class AttributesSubject < Shy::Enum::Base
+      attr_reader :upcased_hex
+
+      def after_initialize
+        @upcased_hex = hex&.upcase
+      end
+
+      RED = new(hex: "ff0000", complementary: "00ffff")
+      GREEN = new("verde", hex: "00ff00")
+      BLUE = new
+
+      freeze
+    end
+
+    def test_kwargs_define_attribute_readers
+      assert_equal "ff0000", AttributesSubject::RED.hex
+      assert_equal "00ffff", AttributesSubject::RED.complementary
+    end
+
+    def test_member_without_an_attribute_returns_nil
+      assert_nil AttributesSubject::GREEN.complementary
+      assert_nil AttributesSubject::BLUE.hex
+    end
+
+    def test_value_is_positional_alongside_kwargs
+      assert_equal "red", AttributesSubject::RED.value
+      assert_equal "verde", AttributesSubject::GREEN.value
+    end
+
+    def test_attributes_are_set_before_after_initialize
+      assert_equal "00FF00", AttributesSubject::GREEN.upcased_hex
+    end
+
+    def test_attributes_shared_by_members_do_not_redefine_the_reader
+      verbose = $VERBOSE
+      # Redefining a method warns only in verbose mode
+      $VERBOSE = true
+
+      assert_silent do
+        OpenEnum.const_set(:SHARED_ONE, OpenEnum.send(:new, shared: 1))
+        OpenEnum.const_set(:SHARED_TWO, OpenEnum.send(:new, shared: 2))
+      end
+      assert_equal 2, OpenEnum::SHARED_TWO.shared
+    ensure
+      $VERBOSE = verbose
+    end
+
+    def test_exception_when_attribute_conflicts_with_an_existing_method
+      error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, name: "foo") }
+      assert_equal "Attribute `name` conflicts with Shy::Enum::Base#name", error.message
+      error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, hash: 1) }
+      assert_equal "Attribute `hash` conflicts with Kernel#hash", error.message
+    end
+
+    def test_exception_when_attribute_conflicts_with_a_private_method_of_base
+      error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, initialize: 1) }
+      assert_equal "Attribute `initialize` conflicts with Shy::Enum::Base#initialize", error.message
+    end
+
+    def test_attribute_can_shadow_a_private_kernel_method
+      assert OpenEnum.private_method_defined?(:format)
+      assert_equal Kernel, OpenEnum.instance_method(:format).owner
+
+      OpenEnum.const_set(:FORMATTED, OpenEnum.send(:new, format: "png"))
+
+      assert_equal "png", OpenEnum::FORMATTED.format
+    end
+
     def test_unrelated_constant_added_to_enum_is_ignored
       OpenEnum.const_set(:UNRELATED, "just a string")
 
