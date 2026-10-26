@@ -210,6 +210,10 @@ module Shy
       assert_equal 'Unknown member for value "2"', error.message
     end
 
+    def test_member_applies_before_cast
+      assert CastingSubject.member?("1") # rubocop:disable Minitest/AssertIncludes
+    end
+
     def test_before_cast_is_private
       assert_raises(NoMethodError) { @subject.before_cast("pink") }
     end

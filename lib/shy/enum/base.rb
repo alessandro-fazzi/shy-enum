@@ -86,12 +86,9 @@ module Shy
         #
         # * `obj` - An enum member, or the value of an enum member
         #
-        # Instances of the enum are looked up among the members, any other object
-        # among the values.
+        # Looks up like `[]`, `before_cast` included.
         def member?(obj)
-          return super if obj.is_a?(self)
-
-          values.include?(obj)
+          !self[obj].nil?
         end
 
         # Returns the complete registry of entries
