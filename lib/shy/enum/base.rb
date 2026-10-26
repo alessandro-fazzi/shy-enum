@@ -37,8 +37,26 @@ module Shy
     # ```
     class Base
       class << self
+        include Enumerable
+
         # All enum members (aliased as `all`)
         attr_reader :registry
+
+        # Yields each enum member in declaration order
+        #
+        # Returns an Enumerator if no block is given
+        def each(&)
+          return enum_for(__method__) unless block_given?
+
+          registry.each(&)
+          self
+        end
+
+        # Including Enumerable shadows `Module#include?`: restore the idiomatic
+        # Module API, so it keeps checking for included modules and not for members.
+        def include?(mod)
+          Module.instance_method(:include?).bind_call(self, mod)
+        end
 
         # Returns the complete registry of entries
         def all

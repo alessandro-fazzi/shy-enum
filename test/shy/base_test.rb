@@ -57,6 +57,41 @@ module Shy
       assert_equal @subject.all, @subject.registry
     end
 
+    def test_each_yields_members_in_declaration_order
+      yielded = []
+      @subject.each { yielded << it } # rubocop:disable Style/MapIntoArray
+
+      assert_equal [@subject::PINK, @subject::RED, @subject::VIOLET], yielded
+    end
+
+    def test_each_returns_the_enum_class
+      assert_same(@subject, @subject.each { nil })
+    end
+
+    def test_each_without_block_returns_an_enumerator
+      enumerator = @subject.each
+
+      assert_kind_of Enumerator, enumerator
+      assert_equal @subject.all, enumerator.to_a
+    end
+
+    def test_enum_is_enumerable
+      assert_kind_of Enumerable, @subject
+      assert_equal %w[PINK RED VIOLET], @subject.map(&:name)
+      assert_equal(@subject::RED, @subject.find { it.value == "red" })
+      assert_equal @subject::VIOLET, @subject.max
+    end
+
+    def test_enumerable_does_not_leak_members_between_subclasses
+      assert_equal %w[pink red violet yellow orange], SubjectSubclass.map(&:value)
+      assert_equal %w[pink red violet], Subject.map(&:value)
+    end
+
+    def test_include_keeps_module_semantics
+      assert Subject.include?(Comparable) # rubocop:disable Minitest/AssertIncludes
+      assert_raises(TypeError) { Subject.include?(Subject::PINK) }
+    end
+
     def test_enum_values
       assert_equal %w[pink red violet], @subject.values
     end
