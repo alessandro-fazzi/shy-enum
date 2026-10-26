@@ -98,7 +98,8 @@ module Shy
 
     def test_include_keeps_module_semantics
       assert Subject.include?(Comparable) # rubocop:disable Minitest/AssertIncludes
-      assert_raises(TypeError) { Subject.include?(Subject::PINK) }
+      error = assert_raises(TypeError) { Subject.include?(Subject::PINK) }
+      assert_match(/member\?/, error.message)
     end
 
     def test_enum_values

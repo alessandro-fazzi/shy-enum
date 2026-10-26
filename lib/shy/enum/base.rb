@@ -59,6 +59,11 @@ module Shy
         # Including Enumerable shadows `Module#include?`: restore the idiomatic
         # Module API, so it keeps checking for included modules and not for members.
         def include?(mod)
+          unless mod.is_a?(Module)
+            raise TypeError, "wrong argument type #{mod.class} (expected Module). " \
+                             "Use `member?` to check for enum members or values"
+          end
+
           Module.instance_method(:include?).bind_call(self, mod)
         end
 
