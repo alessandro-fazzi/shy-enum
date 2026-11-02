@@ -9,9 +9,9 @@ Studying [typesafe_enum](https://github.com/dmolesUC/typesafe_enum/tree/master) 
 
 ```ruby
 class Color < Shy::Enum::Base
-  PINK = new
-  RED = new
-  VIOLET = new
+  Pink = new
+  Red = new
+  Violet = new
 
   freeze
 end
@@ -25,51 +25,51 @@ end
 flower = Flower.new
 flower.color #=> nil
 flower.pink!
-flower.color #=> #<Color::PINK value="pink">
+flower.color #=> #<Color::Pink value="pink">
 flower.pink? #=> true
 flower.violet? #=> false
-flower.color = Color::RED
-flower.color #=> #<Color::RED value="red">
+flower.color = Color::Red
+flower.color #=> #<Color::Red value="red">
 
-Color.send(:new, :BROWN) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
+Color.send(:new, :Brown) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
 ```
 
 ### Setting integer values
 
 ```ruby
 class Status < Shy::Enum::Base
-  DRAFT = new(0)
-  PUBLISHED = new(1)
-  ARCHIVED = new(2)
+  Draft = new(0)
+  Published = new(1)
+  Archived = new(2)
 
   freeze
 end
 
-Status::DRAFT.value #=> 0
-Status::PUBLISHED.value #=> 1
-Status::ARCHIVED.value #=> 2
+Status::Draft.value #=> 0
+Status::Published.value #=> 1
+Status::Archived.value #=> 2
 ```
 
 ### Setting string values
 
 ```ruby
 class Role < Shy::Enum::Base
-  ADMIN = new("administrator")
-  USER = new("regular_user")
-  GUEST = new("guest")
+  Admin = new("administrator")
+  User = new("regular_user")
+  Guest = new("guest")
 
   freeze
 end
 
-Role::ADMIN.value #=> "administrator"
-Role::USER.value #=> "regular_user"
-Role::GUEST.value #=> "guest"
+Role::Admin.value #=> "administrator"
+Role::User.value #=> "regular_user"
+Role::Guest.value #=> "guest"
 ```
 
 `to_s` always returns the value as a String:
 
 ```ruby
-Status::PUBLISHED.to_s #=> "1"
+Status::Published.to_s #=> "1"
 ```
 
 ### Extra attributes
@@ -79,16 +79,16 @@ Members without an attribute return `nil`; the value stays the positional argume
 
 ```ruby
 class Color < Shy::Enum::Base
-  RED = new(hex: "ff0000")
-  GREEN = new("verde", hex: "00ff00")
-  BLUE = new
+  Red = new(hex: "ff0000")
+  Green = new("verde", hex: "00ff00")
+  Blue = new
 
   freeze
 end
 
-Color::RED.hex      #=> "ff0000"
-Color::GREEN.value  #=> "verde"
-Color::BLUE.hex     #=> nil
+Color::Red.hex      #=> "ff0000"
+Color::Green.value  #=> "verde"
+Color::Blue.hex     #=> nil
 ```
 
 Attributes are already set when `after_initialize` runs. An attribute can't override
@@ -99,15 +99,15 @@ an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`.
 `inspect` shows the value and the instance variables of the member, like `Data`:
 
 ```ruby
-Color::RED.inspect   #=> #<Color::RED value="red", hex="ff0000">
-Color::BLUE.inspect  #=> #<Color::BLUE value="blue">
+Color::Red.inspect   #=> #<Color::Red value="red", hex="ff0000">
+Color::Blue.inspect  #=> #<Color::Blue value="blue">
 ```
 
 To choose what to show, override the private `instance_variables_to_inspect`:
 
 ```ruby
 class ApiKey < Shy::Enum::Base
-  PUBLIC = new(token: "abc")
+  Public = new(token: "abc")
 
   private
 
@@ -116,23 +116,23 @@ class ApiKey < Shy::Enum::Base
   freeze
 end
 
-ApiKey::PUBLIC.inspect #=> #<ApiKey::PUBLIC value="public">
+ApiKey::Public.inspect #=> #<ApiKey::Public value="public">
 ```
 
 ### Default values
 
 ```ruby
 class Color < Shy::Enum::Base
-  RED = new       # value is automatically set to "red"
-  GREEN = new     # value is automatically set to "green"
-  BLUE = new      # value is automatically set to "blue"
+  Red = new       # value is automatically set to "red"
+  Green = new     # value is automatically set to "green"
+  Blue = new      # value is automatically set to "blue"
 
   freeze
 end
 
-Color::RED.value #=> "red"
-Color::GREEN.value #=> "green"
-Color::BLUE.value #=> "blue"
+Color::Red.value #=> "red"
+Color::Green.value #=> "green"
+Color::Blue.value #=> "blue"
 ```
 
 ### Comparing enum members
@@ -141,25 +141,25 @@ The comparison is based on the enum member's ordinal position, which is assigned
 
 ```ruby
 class Status < Shy::Enum::Base
-  DRAFT = new
-  PUBLISHED = new
-  ARCHIVED = new
+  Draft = new
+  Published = new
+  Archived = new
 
   freeze
 end
 
-Status::DRAFT < Status::PUBLISHED    #=> true
-Status::PUBLISHED > Status::DRAFT    #=> true
-Status::ARCHIVED > Status::PUBLISHED #=> true
-Status::DRAFT < Status::ARCHIVED    #=> true
+Status::Draft < Status::Published    #=> true
+Status::Published > Status::Draft    #=> true
+Status::Archived > Status::Published #=> true
+Status::Draft < Status::Archived    #=> true
 ```
 
 Members are only comparable with members of the same enum: with any other object
 `<=>` returns `nil` and `==` returns `false`.
 
 ```ruby
-Status::DRAFT <=> "draft" #=> nil
-Status::DRAFT == "draft"  #=> false
+Status::Draft <=> "draft" #=> nil
+Status::Draft == "draft"  #=> false
 ```
 
 ### Using in case statements
@@ -168,29 +168,29 @@ Enum members can be used in case statements thanks to Ruby's `===` operator. Her
 
 ```ruby
 class Status < Shy::Enum::Base
-  DRAFT = new
-  PUBLISHED = new
-  ARCHIVED = new
+  Draft = new
+  Published = new
+  Archived = new
   freeze
 end
 
-status = Status::PUBLISHED
+status = Status::Published
 
 # Ruby uses === internally for case statements
-# This is equivalent to Status::DRAFT === status
+# This is equivalent to Status::Draft === status
 case status
-when Status::DRAFT
+when Status::Draft
   puts "Still working on it"
-when Status::PUBLISHED
+when Status::Published
   puts "Live and ready"
-when Status::ARCHIVED
+when Status::Archived
   puts "No longer active"
 end
 #=> "Live and ready"
 
 # You can also use it directly
-Status::PUBLISHED === status #=> true
-Status::DRAFT === status    #=> false
+Status::Published === status #=> true
+Status::Draft === status    #=> false
 ```
 
 ### Iterating members
@@ -198,10 +198,10 @@ Status::DRAFT === status    #=> false
 The enum class is `Enumerable` over its members, in declaration order.
 
 ```ruby
-Color.each { puts it.name }    # prints PINK, RED, VIOLET
+Color.each { puts it.name }    # prints Pink, Red, Violet
 Color.map(&:value)             #=> ["pink", "red", "violet"]
 Color.size                     #=> 3
-Color.member?(Color::RED)      #=> true
+Color.member?(Color::Red)      #=> true
 Color.member?("red")           #=> true
 Color.member?("brown")         #=> false
 ```
@@ -215,10 +215,10 @@ meaning (included modules) and raises `TypeError` when given anything else.
 `fetch` (aliased as `cast`) does the same, but raises `Shy::Enum::Error`.
 
 ```ruby
-Color["red"]          #=> Color::RED
-Color[Color::RED]     #=> Color::RED
+Color["red"]          #=> Color::Red
+Color[Color::Red]     #=> Color::Red
 Color["brown"]        #=> nil
-Color.fetch("red")    #=> Color::RED
+Color.fetch("red")    #=> Color::Red
 Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Error)
 ```
 
@@ -228,8 +228,8 @@ override the private `before_cast` class method. Define it before calling `freez
 
 ```ruby
 class Status < Shy::Enum::Base
-  DRAFT = new(0)
-  PUBLISHED = new(1)
+  Draft = new(0)
+  Published = new(1)
 
   def self.before_cast(obj) = Integer(obj, exception: false)
   private_class_method :before_cast
@@ -237,7 +237,7 @@ class Status < Shy::Enum::Base
   freeze
 end
 
-Status["1"] #=> Status::PUBLISHED
+Status["1"] #=> Status::Published
 ```
 
 ### Exceptions
@@ -246,7 +246,7 @@ The following exceptions could be raised:
 
 ```ruby
 # When trying to add a new member to a frozen enum
-Color.send(:new, :BROWN)
+Color.send(:new, :Brown)
 #=> Shy::Enum::Error "Can't add new values to a closed Enum"
 
 # When trying to set an enum value with an instance of a different class
@@ -255,8 +255,8 @@ flower.color = String.new("red")
 
 # When trying to add a member with a duplicated value
 class Status < Shy::Enum::Base
-  DRAFT = new(0)
-  DELETED = new(0)
+  Draft = new(0)
+  Deleted = new(0)
   #=> Shy::Enum::Error "Duplicated member"
 end
 
@@ -265,7 +265,7 @@ Color.fetch("brown")
 #=> Shy::Enum::Error "Unknown member for value \"brown\""
 
 # When trying to modify a frozen enum member
-Color::RED.instance_variable_set(:@value, "new_value")
+Color::Red.instance_variable_set(:@value, "new_value")
 #=> FrozenError "can't modify frozen ...""
 ```
 

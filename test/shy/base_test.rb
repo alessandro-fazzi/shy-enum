@@ -5,9 +5,9 @@ require "test_helper"
 module Shy
   class ColorEnumTest < Minitest::Test
     class Subject < Shy::Enum::Base
-      PINK = new
-      RED = new
-      VIOLET = new
+      Pink = new
+      Red = new
+      Violet = new
 
       freeze
     end
@@ -25,31 +25,31 @@ module Shy
     end
 
     def test_enum_comparisons
-      assert_operator @subject::PINK, :<, @subject::RED
-      assert_operator @subject::PINK, :<, @subject::VIOLET
-      assert_operator @subject::RED, :>, @subject::PINK
-      assert_operator @subject::RED, :<, @subject::VIOLET
-      assert_operator @subject::VIOLET, :>, @subject::PINK
-      assert_operator @subject::VIOLET, :>, @subject::RED
+      assert_operator @subject::Pink, :<, @subject::Red
+      assert_operator @subject::Pink, :<, @subject::Violet
+      assert_operator @subject::Red, :>, @subject::Pink
+      assert_operator @subject::Red, :<, @subject::Violet
+      assert_operator @subject::Violet, :>, @subject::Pink
+      assert_operator @subject::Violet, :>, @subject::Red
     end
 
     def test_spaceship_operator_returns_ordinal_comparison
-      assert_equal(-1, @subject::PINK <=> @subject::RED)
-      assert_equal(0, @subject::PINK <=> @subject::PINK) # rubocop:disable Lint/BinaryOperatorWithIdenticalOperands
-      assert_equal(1, @subject::VIOLET <=> @subject::RED)
+      assert_equal(-1, @subject::Pink <=> @subject::Red)
+      assert_equal(0, @subject::Pink <=> @subject::Pink) # rubocop:disable Lint/BinaryOperatorWithIdenticalOperands
+      assert_equal(1, @subject::Violet <=> @subject::Red)
     end
 
     def test_enum_is_sortable
-      assert_equal [@subject::PINK, @subject::RED, @subject::VIOLET],
-                   [@subject::VIOLET, @subject::PINK, @subject::RED].sort
+      assert_equal [@subject::Pink, @subject::Red, @subject::Violet],
+                   [@subject::Violet, @subject::Pink, @subject::Red].sort
     end
 
     def test_spaceship_operator_returns_nil_when_other_is_not_comparable
-      assert_nil(@subject::PINK <=> "not an enum")
+      assert_nil(@subject::Pink <=> "not an enum")
     end
 
     def test_enum_registry
-      assert_equal [@subject::PINK, @subject::RED, @subject::VIOLET], @subject.all
+      assert_equal [@subject::Pink, @subject::Red, @subject::Violet], @subject.all
       assert_kind_of Array, @subject.registry
     end
 
@@ -61,7 +61,7 @@ module Shy
       yielded = []
       @subject.each { yielded << it } # rubocop:disable Style/MapIntoArray
 
-      assert_equal [@subject::PINK, @subject::RED, @subject::VIOLET], yielded
+      assert_equal [@subject::Pink, @subject::Red, @subject::Violet], yielded
     end
 
     def test_each_returns_the_enum_class
@@ -86,9 +86,9 @@ module Shy
 
     def test_enum_is_enumerable
       assert_kind_of Enumerable, @subject
-      assert_equal %w[PINK RED VIOLET], @subject.map(&:name)
-      assert_equal(@subject::RED, @subject.find { it.value == "red" })
-      assert_equal @subject::VIOLET, @subject.max
+      assert_equal %w[Pink Red Violet], @subject.map(&:name)
+      assert_equal(@subject::Red, @subject.find { it.value == "red" })
+      assert_equal @subject::Violet, @subject.max
     end
 
     def test_enumerable_does_not_leak_members_between_subclasses
@@ -98,7 +98,7 @@ module Shy
 
     def test_include_keeps_module_semantics
       assert Subject.include?(Comparable) # rubocop:disable Minitest/AssertIncludes
-      error = assert_raises(TypeError) { Subject.include?(Subject::PINK) }
+      error = assert_raises(TypeError) { Subject.include?(Subject::Pink) }
       assert_match(/member\?/, error.message)
     end
 
@@ -106,11 +106,11 @@ module Shy
     # checks for included modules, so `member?` must be asserted directly.
     # rubocop:disable Minitest/AssertIncludes, Minitest/RefuteIncludes
     def test_member_with_a_member
-      assert Subject.member?(Subject::PINK)
+      assert Subject.member?(Subject::Pink)
     end
 
     def test_member_with_a_member_of_a_subclass
-      refute Subject.member?(SubjectSubclass::YELLOW)
+      refute Subject.member?(SubjectSubclass::Yellow)
     end
 
     def test_member_with_a_value
@@ -119,7 +119,7 @@ module Shy
     end
 
     def test_member_with_a_member_of_another_enum_sharing_a_value
-      refute Subject.member?(OtherColor::PINK)
+      refute Subject.member?(OtherColor::Pink)
     end
     # rubocop:enable Minitest/AssertIncludes, Minitest/RefuteIncludes
 
@@ -129,7 +129,7 @@ module Shy
 
     def test_exception_when_member_added_to_frozen_enum
       error = assert_raises Shy::Enum::Error do
-        @subject.send(:new, :FOO)
+        @subject.send(:new, :Foo)
       end
       assert_equal "Can't add new values to a closed Enum", error.message
     end
@@ -143,40 +143,44 @@ module Shy
 
     def test_you_cannot_modify_an_enum_type_once_declared
       assert_raises FrozenError do
-        @subject::PINK.instance_variable_set(:@value, "Hacked")
+        @subject::Pink.instance_variable_set(:@value, "Hacked")
       end
     end
 
     def test_brackets_with_a_member
-      assert_same @subject::PINK, @subject[@subject::PINK]
+      assert_same @subject::Pink, @subject[@subject::Pink]
     end
 
     def test_brackets_with_a_member_of_a_subclass
-      assert_nil @subject[SubjectSubclass::YELLOW]
+      assert_nil @subject[SubjectSubclass::Yellow]
     end
 
     def test_brackets_with_a_value
-      assert_same @subject::PINK, @subject["pink"]
-      assert_nil @subject["brown"]
+      assert_same @subject::Pink, @subject["pink"]
     end
 
     def test_brackets_with_a_member_of_another_enum_sharing_a_value
-      assert_nil @subject[OtherColor::PINK]
+      assert_nil @subject[OtherColor::Pink]
     end
 
     def test_brackets_do_not_look_up_by_name
-      assert_nil @subject[:PINK]
-      assert_nil @subject["PINK"]
+      assert_equal "Pink", @subject::Pink.name
+      assert_nil @subject[:Pink]
+      assert_nil @subject["Pink"]
     end
 
     def test_brackets_compare_values_strictly
-      assert_same IntegerSubject::ONE, IntegerSubject[1]
+      assert_same IntegerSubject::One, IntegerSubject[1]
       assert_nil IntegerSubject["1"]
     end
 
     def test_fetch_with_a_member_or_a_value
-      assert_same @subject::PINK, @subject.fetch(@subject::PINK)
-      assert_same @subject::PINK, @subject.fetch("pink")
+      assert_same @subject::Pink, @subject.fetch(@subject::Pink)
+      assert_same @subject::Pink, @subject.fetch("pink")
+    end
+
+    def test_brackets_return_nil_when_not_found
+      assert_nil @subject["brown"]
     end
 
     def test_fetch_raises_with_the_looked_up_value
@@ -189,7 +193,7 @@ module Shy
     end
 
     class CastingSubject < Shy::Enum::Base
-      ONE = new(1)
+      One = new(1)
 
       def self.before_cast(obj) = Integer(obj, exception: false)
       private_class_method :before_cast
@@ -198,11 +202,11 @@ module Shy
     end
 
     def test_before_cast_converts_the_looked_up_value
-      assert_same CastingSubject::ONE, CastingSubject["1"]
+      assert_same CastingSubject::One, CastingSubject["1"]
     end
 
     def test_before_cast_is_not_applied_to_members
-      assert_same CastingSubject::ONE, CastingSubject[CastingSubject::ONE]
+      assert_same CastingSubject::One, CastingSubject[CastingSubject::One]
     end
 
     def test_fetch_reports_the_value_before_cast
@@ -225,30 +229,30 @@ module Shy
         @upcased_hex = hex&.upcase
       end
 
-      RED = new(hex: "ff0000", complementary: "00ffff")
-      GREEN = new("verde", hex: "00ff00")
-      BLUE = new
+      Red = new(hex: "ff0000", complementary: "00ffff")
+      Green = new("verde", hex: "00ff00")
+      Blue = new
 
       freeze
     end
 
     def test_kwargs_define_attribute_readers
-      assert_equal "ff0000", AttributesSubject::RED.hex
-      assert_equal "00ffff", AttributesSubject::RED.complementary
+      assert_equal "ff0000", AttributesSubject::Red.hex
+      assert_equal "00ffff", AttributesSubject::Red.complementary
     end
 
     def test_member_without_an_attribute_returns_nil
-      assert_nil AttributesSubject::GREEN.complementary
-      assert_nil AttributesSubject::BLUE.hex
+      assert_nil AttributesSubject::Green.complementary
+      assert_nil AttributesSubject::Blue.hex
     end
 
     def test_value_is_positional_alongside_kwargs
-      assert_equal "red", AttributesSubject::RED.value
-      assert_equal "verde", AttributesSubject::GREEN.value
+      assert_equal "red", AttributesSubject::Red.value
+      assert_equal "verde", AttributesSubject::Green.value
     end
 
     def test_attributes_are_set_before_after_initialize
-      assert_equal "00FF00", AttributesSubject::GREEN.upcased_hex
+      assert_equal "00FF00", AttributesSubject::Green.upcased_hex
     end
 
     def test_attributes_shared_by_members_do_not_redefine_the_reader
@@ -257,10 +261,10 @@ module Shy
       $VERBOSE = true
 
       assert_silent do
-        OpenEnum.const_set(:SHARED_ONE, OpenEnum.send(:new, shared: 1))
-        OpenEnum.const_set(:SHARED_TWO, OpenEnum.send(:new, shared: 2))
+        OpenEnum.const_set(:SharedOne, OpenEnum.send(:new, shared: 1))
+        OpenEnum.const_set(:SharedTwo, OpenEnum.send(:new, shared: 2))
       end
-      assert_equal 2, OpenEnum::SHARED_TWO.shared
+      assert_equal 2, OpenEnum::SharedTwo.shared
     ensure
       $VERBOSE = verbose
     end
@@ -281,68 +285,68 @@ module Shy
       assert OpenEnum.private_method_defined?(:format)
       assert_equal Kernel, OpenEnum.instance_method(:format).owner
 
-      OpenEnum.const_set(:FORMATTED, OpenEnum.send(:new, format: "png"))
+      OpenEnum.const_set(:Formatted, OpenEnum.send(:new, format: "png"))
 
-      assert_equal "png", OpenEnum::FORMATTED.format
+      assert_equal "png", OpenEnum::Formatted.format
     end
 
     def test_unrelated_constant_added_to_enum_is_ignored
-      OpenEnum.const_set(:UNRELATED, "just a string")
+      OpenEnum.const_set(:Unrelated, "just a string")
 
-      refute_includes OpenEnum.registry.map(&:name), "UNRELATED"
+      refute_includes OpenEnum.registry.map(&:name), "Unrelated"
     end
 
     def test_exception_when_duplicated_member_by_const_added
-      OpenEnum.const_set(:FOO, OpenEnum.send(:new))
-      warning_message = /warning: already initialized constant Shy::ColorEnumTest::OpenEnum::FOO/
+      OpenEnum.const_set(:Foo, OpenEnum.send(:new))
+      warning_message = /warning: already initialized constant Shy::ColorEnumTest::OpenEnum::Foo/
       error = nil
 
       assert_output(nil, warning_message) do
         error = assert_raises Shy::Enum::Error do
-          OpenEnum.const_set(:FOO, OpenEnum.send(:new))
+          OpenEnum.const_set(:Foo, OpenEnum.send(:new))
         end
       end
       assert_equal "Duplicated member", error.message
     end
 
     def test_exception_when_duplicated_member_by_value_added
-      OpenEnum.const_set(:BAR, OpenEnum.send(:new, 0))
+      OpenEnum.const_set(:Bar, OpenEnum.send(:new, 0))
 
       error = assert_raises Shy::Enum::Error do
-        OpenEnum.const_set(:BAZ, OpenEnum.send(:new, 0))
+        OpenEnum.const_set(:Baz, OpenEnum.send(:new, 0))
       end
       assert_equal "Duplicated member", error.message
     end
 
     def test_enum_name_property
-      assert_equal "PINK", @subject::PINK.name
-      assert_equal "RED", @subject::RED.name
-      assert_equal "VIOLET", @subject::VIOLET.name
+      assert_equal "Pink", @subject::Pink.name
+      assert_equal "Red", @subject::Red.name
+      assert_equal "Violet", @subject::Violet.name
     end
 
     def test_enum_in_case_statement
-      result = case @subject::RED
-               when @subject::PINK then "pink"
-               when @subject::RED then "red"
-               when @subject::VIOLET then "violet"
+      result = case @subject::Red
+               when @subject::Pink then "pink"
+               when @subject::Red then "red"
+               when @subject::Violet then "violet"
                end
 
       assert_equal "red", result
     end
 
     def test_enum_in_pattern_matching
-      result = case @subject::VIOLET
-               in Subject::PINK then "pink"
-               in Subject::RED then "red"
-               in Subject::VIOLET then "violet"
+      result = case @subject::Violet
+               in Subject::Pink then "pink"
+               in Subject::Red then "red"
+               in Subject::Violet then "violet"
                end
 
       assert_equal "violet", result
     end
 
     class SubjectSubclass < Subject
-      YELLOW = new
-      ORANGE = new
+      Yellow = new
+      Orange = new
 
       freeze
     end
@@ -358,21 +362,21 @@ module Shy
     end
 
     def test_how_member_is_inspected
-      assert_equal '#<Shy::ColorEnumTest::Subject::PINK value="pink">', @subject::PINK.inspect
+      assert_equal '#<Shy::ColorEnumTest::Subject::Pink value="pink">', @subject::Pink.inspect
     end
 
     def test_inspect_shows_the_value_type
       # integer is not represented as string
-      assert_equal "#<Shy::ColorEnumTest::IntegerSubject::ONE value=1>", IntegerSubject::ONE.inspect
+      assert_equal "#<Shy::ColorEnumTest::IntegerSubject::One value=1>", IntegerSubject::One.inspect
     end
 
     def test_inspect_shows_the_instance_variables_of_the_member
-      assert_equal '#<Shy::ColorEnumTest::AttributesSubject::GREEN value="verde", hex="00ff00", upcased_hex="00FF00">',
-                   AttributesSubject::GREEN.inspect
+      assert_equal '#<Shy::ColorEnumTest::AttributesSubject::Green value="verde", hex="00ff00", upcased_hex="00FF00">',
+                   AttributesSubject::Green.inspect
     end
 
     class QuietSubject < Shy::Enum::Base
-      SECRET = new(token: "abc")
+      Secret = new(token: "abc")
 
       private
 
@@ -382,33 +386,33 @@ module Shy
     end
 
     def test_inspect_honors_instance_variables_to_inspect
-      assert_equal '#<Shy::ColorEnumTest::QuietSubject::SECRET value="secret">', QuietSubject::SECRET.inspect
+      assert_equal '#<Shy::ColorEnumTest::QuietSubject::Secret value="secret">', QuietSubject::Secret.inspect
     end
 
     def test_member_prints_its_value_when_converted_to_string
-      assert_equal "pink", @subject::PINK.to_s
+      assert_equal "pink", @subject::Pink.to_s
     end
 
     def test_equality_with_other_type_returns_false
       # Order of the compared objects is strict: swapping the two would exercise
       # `String#==` instead of our implementation.
-      refute_equal @subject::PINK, "pink"
+      refute_equal @subject::Pink, "pink"
     end
 
     class OtherColor < Shy::Enum::Base
-      PINK = new
+      Pink = new
 
       freeze
     end
 
     class IntegerSubject < Shy::Enum::Base
-      ONE = new(1)
+      One = new(1)
 
       freeze
     end
 
     def test_to_s_returns_a_string_with_integer_value
-      assert_kind_of String, IntegerSubject::ONE.to_s
+      assert_kind_of String, IntegerSubject::One.to_s
     end
   end
 end

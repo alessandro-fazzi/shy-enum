@@ -5,9 +5,9 @@ require "test_helper"
 module Shy
   class HasEnumTest < Minitest::Test
     class Color < Shy::Enum::Base
-      PINK = new
-      RED = new
-      VIOLET = new
+      Pink = new
+      Red = new
+      Violet = new
 
       freeze
     end
@@ -38,9 +38,9 @@ module Shy
     end
 
     def test_setting_enum
-      @subject.color = Color::PINK
+      @subject.color = Color::Pink
 
-      assert_equal Color::PINK, @subject.color
+      assert_equal Color::Pink, @subject.color
     end
 
     def test_enum_type_is_enforced
@@ -53,7 +53,7 @@ module Shy
     def test_setting_enum_with_bang_method
       @subject.pink!
 
-      assert_equal Color::PINK, @subject.color
+      assert_equal Color::Pink, @subject.color
     end
 
     def test_checking_enum_with_predicate_method
@@ -63,7 +63,7 @@ module Shy
     end
 
     class ::TopLevelSeason < Shy::Enum::Base
-      SPRING = new
+      Spring = new
 
       freeze
     end
