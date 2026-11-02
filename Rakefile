@@ -15,7 +15,6 @@ RDoc::Task.new do |rdoc|
   rdoc.main = "README.md"
   rdoc.rdoc_files.include("README.md", "lib/**/*.rb")
   rdoc.title = "Shy-Enum Documentation"
-  rdoc.options << "--root" << "lib"
   rdoc.options << "--markup" << "markdown"
 end
 

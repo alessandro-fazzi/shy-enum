@@ -5,11 +5,12 @@ require_relative "lib/shy/enum/version"
 Gem::Specification.new do |spec|
   spec.name = "shy-enum"
   spec.version = Shy::Enum::VERSION
-  spec.authors = ["'Alessandro Fazzi'"]
+  spec.authors = ["Alessandro Fazzi"]
   spec.email = ["alessandro.fazzi@welaika.com"]
 
-  spec.summary = "Studying type safe enums"
-  spec.description = ""
+  spec.summary = "Small, dependency-free enums for plain Ruby"
+  spec.description = "Small, dependency-free enums for plain Ruby: frozen, comparable members " \
+                     "with values and extra attributes, and a mixin to use them in any class."
   spec.homepage = "https://github.com/alessandro-fazzi/shy-enum"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 4.0"
@@ -34,5 +35,4 @@ Gem::Specification.new do |spec|
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
   spec.metadata["rubygems_mfa_required"] = "true"
-  # Remove YARD dependency
 end

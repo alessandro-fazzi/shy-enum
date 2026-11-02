@@ -2,59 +2,80 @@
 
 module Shy
   module Enum
-    # Base class for creating enums
+    # Base class for enums: subclass it and assign each member to a constant.
+    #
+    # Each member is a frozen instance of the subclass with a #name (the
+    # constant name), a #value and an #ordinal (its position, from 1). Call
+    # `freeze` after the last member to close the enum.
     #
     # ## Basic usage
     #
-    # ```
+    # The value defaults to the downcased constant name:
+    #
+    # ```ruby
     # class Status < Shy::Enum::Base
-    #   DRAFT = new
-    #   PUBLISHED = new
-    #   ARCHIVED = new
+    #   Draft = new
+    #   Published = new
+    #   Archived = new
+    #
     #   freeze
     # end
+    #
+    # Status::Draft.value #=> "draft"
     # ```
     #
-    # ## With custom values
+    # ## Custom values
     #
-    # ```
-    # class Role < Shy::Enum::Base
-    #   ADMIN = new("administrator")
-    #   USER = new("regular_user")
-    #   freeze
-    # end
-    # ```
+    # Pass the value as the first argument, of any type:
     #
-    # ## With integer values
-    #
-    # ```
+    # ```ruby
     # class Priority < Shy::Enum::Base
-    #   LOW = new(0)
-    #   MEDIUM = new(1)
-    #   HIGH = new(2)
+    #   Low = new(0)
+    #   Medium = new(1)
+    #   High = new(2)
+    #
     #   freeze
     # end
     # ```
     #
-    # ## With extra attributes
+    # ## Extra attributes
     #
     # Keyword arguments become attributes with a reader, like a Struct. Members
-    # without an attribute return nil.
+    # without an attribute return `nil`.
     #
-    # ```
+    # ```ruby
     # class Color < Shy::Enum::Base
-    #   RED = new(hex: "ff0000")
-    #   GREEN = new("verde", hex: "00ff00")
+    #   Red = new(hex: "ff0000")
+    #   Green = new("verde", hex: "00ff00")
+    #   Blue = new
+    #
     #   freeze
     # end
     #
-    # Color::RED.hex #=> "ff0000"
+    # Color::Red.hex   #=> "ff0000"
+    # Color::Blue.hex  #=> nil
     # ```
+    #
+    # ## Working with members
+    #
+    # * Comparison - members are Comparable by ordinal, only with members of the same enum
+    # * Iteration - the enum class is Enumerable over its members, in declaration order
+    # * Lookup - ::[], ::fetch (aliased as `cast`) and ::member? find members by member or value
+    #
+    # ## Customization
+    #
+    # Define these before calling `freeze`:
+    #
+    # * #after_initialize - refines each member right after it is built
+    # * `before_cast` (private class method) - converts the input of ::[], ::fetch and ::member?
+    # * `instance_variables_to_inspect` (private) - chooses what #inspect shows
+    #
+    # The README has a full guide with examples.
     class Base
       class << self
         include Enumerable
 
-        # All enum members (aliased as `all`)
+        # All enum members, in declaration order. Same as ::all
         attr_reader :registry
 
         # Yields each enum member in declaration order
@@ -67,12 +88,17 @@ module Shy
           self
         end
 
+        # Returns the number of members
         def size
           registry.size
         end
 
-        # Including Enumerable shadows `Module#include?`: restore the idiomatic
-        # Module API, so it keeps checking for included modules and not for members.
+        # Checks whether `mod` is included in the enum, like `Module#include?`
+        #
+        # * `mod` - A Module
+        #
+        # Enumerable would make it look for members instead: use ::member? for that.
+        # Raises TypeError if `mod` is not a Module.
         def include?(mod)
           unless mod.is_a?(Module)
             raise TypeError, "wrong argument type #{mod.class} (expected Module). " \
@@ -86,17 +112,17 @@ module Shy
         #
         # * `obj` - An enum member, or the value of an enum member
         #
-        # Looks up like `[]`, `before_cast` included.
+        # Looks up like ::[], `before_cast` included.
         def member?(obj)
           !self[obj].nil?
         end
 
-        # Returns the complete registry of entries
+        # Returns all enum members, in declaration order
         def all
           registry
         end
 
-        # Returns all enum values
+        # Returns the values of all enum members, in declaration order
         def values
           all.map(&:value)
         end
@@ -106,9 +132,15 @@ module Shy
         # * `obj` - An enum member, or the value of an enum member
         #
         # Instances of the enum are looked up among the members, any other object
-        # among the values.
+        # among the values, after `before_cast`. Values are compared with `==`,
+        # so `"1"` doesn't match `1` unless `before_cast` converts it.
         #
-        # Returns nil if the enum member is not found
+        # Returns `nil` if the enum member is not found
+        #
+        # ```ruby
+        # Color["red"]   #=> #<Color::Red value="red">
+        # Color["brown"] #=> nil
+        # ```
         def [](obj)
           return find { it == obj } if obj.is_a?(self)
 
@@ -116,7 +148,7 @@ module Shy
           find { it.value == value }
         end
 
-        # Finds an enum member by member or value, like `[]`
+        # Finds an enum member by member or value, like ::[]
         #
         # * `obj` - An enum member, or the value of an enum member
         #
@@ -153,8 +185,8 @@ module Shy
 
         private
 
-        # Converts the object looked up by `[]` and `fetch` before comparing it
-        # with the values. Enum members are not converted.
+        # Converts the object looked up by `[]`, `fetch` and `member?` before
+        # comparing it with the values. Enum members are not converted.
         #
         # Returns the object unchanged; override it to accept other inputs, e.g.
         # strings for integer values:
@@ -168,13 +200,23 @@ module Shy
         end
       end
 
-      # The ordinal position of the enum member
+      # The position of the enum member in declaration order, starting from 1
       attr_reader :ordinal
-      # The value of the enum member
+      # The value of the enum member: the first argument of `new`, or the
+      # downcased constant name. Members are frozen, so it can't be changed.
       attr_accessor :value
-      # The name of the enum member
+      # The name of the constant holding the enum member, e.g. `"Red"`.
+      # Members are frozen, so it can't be changed.
       attr_accessor :name
 
+      # Builds a member. `new` is private: call it only inside the enum body,
+      # assigning the result to a constant.
+      #
+      # * `value` - The member value; defaults to the downcased constant name
+      # * `attributes` - Extra attributes, each one gets a reader
+      #
+      # Raises Error if the enum is frozen, or if an attribute is named like an
+      # existing method (e.g. `name`).
       def initialize(value = nil, **attributes)
         raise(Error, "Can't add new values to a closed Enum") if self.class.frozen?
 
@@ -184,19 +226,25 @@ module Shy
         after_initialize
       end
 
-      # Called after initialization. Override in subclasses to refine you initialization
-      # without the need to handle calling `super`. Extra attributes are already set.
+      # Called at the end of `initialize`. Override it to refine each member,
+      # with no need to call `super` or to override `initialize`.
+      #
+      # The extra attributes, the positional value and the ordinal are already
+      # set; the name and the default value are not, as they are assigned when
+      # the constant is defined. The member is not frozen yet.
+      #
+      # Define it before the members: the ones declared above it won't call it.
       def after_initialize; end
 
       private_class_method :new
 
-      # Returns the value as a string
+      # Returns the value as a String, e.g. `"1"` for a value of `1`
       def to_s
         value.to_s
       end
 
       # Returns a string representation of the enum member, with its value and
-      # extra attributes, e.g. `#<Color::RED value="red", hex="ff0000">`
+      # extra attributes, e.g. `#<Color::Red value="red", hex="ff0000">`
       #
       # Override the private `instance_variables_to_inspect` to choose the
       # instance variables to show.
@@ -209,7 +257,12 @@ module Shy
 
       # Compares enum members based on their ordinal position
       #
-      # Returns nil if the other object is not comparable
+      # Returns `nil` if `other` is not a member of the same enum
+      #
+      # ```ruby
+      # Status::Draft < Status::Published #=> true
+      # Status::Draft <=> "draft"         #=> nil
+      # ```
       def <=>(other)
         return nil unless other.is_a?(self.class)
 
@@ -219,6 +272,8 @@ module Shy
 
       private
 
+      # The instance variables shown by #inspect: all but `@name` and `@ordinal`.
+      # Override it to choose what to show.
       def instance_variables_to_inspect
         instance_variables - %i[@name @ordinal]
       end

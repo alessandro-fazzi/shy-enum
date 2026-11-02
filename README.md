@@ -1,11 +1,4 @@
-> [!WARNING]
-> This is a POC built to support a discussion between colleagues.
-> It's born unmaintained by its own nature.
-
 # Shy::Enum
-
-Studying [typesafe_enum](https://github.com/dmolesUC/typesafe_enum/tree/master) and
-[ruby_enum](https://github.com/dblock/ruby-enum) and [literal](https://literal.fun/docs/enums.html)
 
 Shy::Enum is a small, dependency-free way to define enums in plain Ruby. Each member is a
 frozen object with a name, a value and an ordinal position, so members are comparable, can be
@@ -24,6 +17,10 @@ end
 Color::Red       #=> #<Color::Red value="red">
 Color::Red.value #=> "red"
 ```
+
+It requires Ruby 4.0 or later. See [Installation](#installation) to add it to a project.
+
+## Usage
 
 ### Default values
 
@@ -137,8 +134,8 @@ defined, and so is the default value. The member is also still unfrozen, so it c
 modified here.
 
 > [!IMPORTANT]
-> Define `after_initialize` before the members, as in the example: it runs while each
-> member is being built, so members declared above it won't call it.
+> Define `after_initialize` before the members, as in the example: it runs
+> while each member is being built, so members declared above it won't call it.
 
 ### Custom methods
 
@@ -213,7 +210,7 @@ end
 Status::Draft < Status::Published    #=> true
 Status::Published > Status::Draft    #=> true
 Status::Archived > Status::Published #=> true
-Status::Draft < Status::Archived    #=> true
+Status::Draft < Status::Archived     #=> true
 
 Status::Draft <=> Status::Published     #=> -1
 Status::Published <=> Status::Published #=> 0
@@ -312,19 +309,21 @@ Color.member?("brown")    #=> false
 ```
 
 > [!NOTE]
-> `include?` is not implemented to preserve its `Module` meaning (included modules)
+> Use `member?`, not `include?`. `include?` keeps its `Module` meaning (whether
+> a module is included) and raises `TypeError` when given anything but a module.
 
 ### Exceptions
 
-The following exceptions could be raised:
+Errors raised by the library are instances of `Shy::Enum::Error`, except for `FrozenError`
+when modifying a member:
 
 ```ruby
 # When trying to add a new member to a frozen enum
-Color.send(:new, :Brown)
+Color.send(:new)
 #=> Shy::Enum::Error "Can't add new values to a closed Enum"
 
-# When trying to set an enum value with an instance of a different class
-flower.color = String.new("red")
+# When trying to set a HasEnum attribute (see below) to an object that isn't a member
+flower.color = "red"
 #=> Shy::Enum::Error "Type error. Enum type must be a Color"
 
 # When trying to add a member with a duplicated value
@@ -339,8 +338,8 @@ Color.fetch("brown")
 #=> Shy::Enum::Error "Unknown member for value \"brown\""
 
 # When trying to modify a frozen enum member
-Color::Red.instance_variable_set(:@value, "new_value")
-#=> FrozenError "can't modify frozen ...""
+Color::Red.value = "new_value"
+#=> FrozenError "can't modify frozen Color: #<Color::Red value=\"red\">"
 ```
 
 ### Freezing
@@ -356,7 +355,7 @@ class Color < Shy::Enum::Base
   freeze # closes the enum
 end
 
-Color.send(:new, :Brown) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
+Color.send(:new) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
 ```
 
 Always end the enum with `freeze`: it keeps the set of members fixed. Once frozen, the class
@@ -417,12 +416,15 @@ flower.color = "red" #=> Shy::Enum::Error "Type error. Enum type must be a Color
 
 ## Installation
 
-> [!NOTE]
-> This gem is not and will not be published on rubygems since it's just a POC
-
-Install the gem and add to the application's Gemfile by executing:
+It requires Ruby 4.0 or later. Install the gem and add to the application's Gemfile by executing:
 
     $ bundle add shy-enum --github "alessandro-fazzi/shy-enum"
+
+Then require it:
+
+```ruby
+require "shy/enum"
+```
 
 ## Development
 
@@ -430,6 +432,10 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 Run `COVERAGE=1 rake test` to also print a line and branch coverage report after the test suite runs.
+
+Run `bundle exec rake rdoc` to generate the API documentation from this README and the code comments
+into `docs/`, then open `docs/index.html`. Run `bundle exec rake rerdoc` to rebuild it from scratch:
+it deletes `docs/` first. The documentation is published to GitHub Pages by the `Deploy Docs` workflow.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version
 number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git
@@ -440,6 +446,12 @@ commits and the created tag, and push the `.gem` file to [rubygems.org](https://
 Bug reports and pull requests are welcome on GitHub at https://github.com/alessandro-fazzi/shy-enum. This project is
 intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the
 [code of conduct](https://github.com/alessandro-fazzi/shy-enum/blob/main/CODE_OF_CONDUCT.md).
+
+## Acknowledgements
+
+Shy::Enum draws ideas from [typesafe_enum](https://github.com/dmolesUC/typesafe_enum),
+[ruby-enum](https://github.com/dblock/ruby-enum), [Literal](https://literal.fun/docs/enums.html)
+and Python's [`enum`](https://docs.python.org/3/library/enum.html) module.
 
 ## License
 

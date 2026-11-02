@@ -2,13 +2,7 @@
 
 module Shy
   module Enum
-    # Custom error class for Shy::Enum
-    #
-    # ## Example
-    #
-    # ```ruby
-    # raise Error, "Can't add new values to a closed Enum"
-    # ```
+    # Raised by Shy::Enum when an enum is misused.
     class Error < StandardError; end
   end
 end

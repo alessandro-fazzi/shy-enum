@@ -2,80 +2,83 @@
 
 module Shy
   module Enum
-    # # Mixin to add enum support to a class
+    # Plugs an enum into any class, so its instances can hold one of the members.
     #
-    # This module provides functionality to add enum-like behavior to Ruby classes.
-    # When included, it allows classes to define and work with strongly-typed enumerated values
-    # in a type-safe manner.
-    #
-    # ## Features
-    #
-    # * Type-safe enum values
-    # * Auto-generated predicate methods (e.g., `draft?`)
-    # * Auto-generated setter methods (e.g., `draft!`)
-    # * Proper type checking for assignments
+    # Include the module, then declare each enum with ClassMethods#enum. The
+    # instances get a reader and a writer for the current member, plus a
+    # predicate and a setter for every member.
     #
     # ## Example
     #
     # ```ruby
     # class Status < Shy::Enum::Base
-    #   DRAFT = new
-    #   PUBLISHED = new
-    #   ARCHIVED = new
+    #   Draft = new
+    #   Published = new
+    #   Archived = new
+    #
     #   freeze
     # end
     #
     # class Post
     #   include Shy::Enum::HasEnum
+    #
     #   enum Status
     # end
     #
     # post = Post.new
-    # post.status = Status::DRAFT      # Sets status using regular assignment
-    # post.draft?                      # => true
-    # post.published?                  # => false
-    # post.published!                  # Changes status to PUBLISHED
-    # post.published?                  # => true
+    # post.status                    #=> nil
+    # post.status = Status::Draft
+    # post.draft?                    #=> true
+    # post.published?                #=> false
+    # post.published!
+    # post.status                    #=> #<Status::Published value="published">
     #
-    # # Type safety
-    # post.status = "DRAFT"           # Raises Error: Type error. Enum must be a Status
-    # ```
-    #
-    # ## Generated Methods
-    #
-    # For each enum value, the following methods are automatically generated:
-    #
-    # * `value?` - Predicate method that returns true if the enum matches the value
-    # * `value!` - Setter method that changes the enum to the specified value
-    # * getter method - Returns the current enum value
-    # * setter method - Sets the enum value with type checking
-    #
-    # Example using generated methods:
-    # ```ruby
-    # post.draft?      # Check if status is draft
-    # post.draft!      # Set status to draft
-    # post.status      # Get current status
-    # post.status = Status::PUBLISHED  # Set status with type checking
+    # post.status = "draft"
+    # #=> Shy::Enum::Error: Type error. Enum type must be a Status
     # ```
     #
     # ## Custom accessor name
     #
-    # Use `as:` to name the reader and the writer yourself:
+    # Pass `as:` to name the reader and the writer yourself:
+    #
     # ```ruby
     # class Post
     #   include Shy::Enum::HasEnum
+    #
     #   enum Status, as: :state
     # end
     #
-    # post.state = Status::DRAFT
-    # post.state # => Status::DRAFT
+    # post = Post.new
+    # post.state = Status::Draft
+    # post.state #=> #<Status::Draft value="draft">
     # ```
     module HasEnum
       def self.included(base) # :nodoc:
         base.extend(ClassMethods)
       end
 
-      module ClassMethods # :nodoc:
+      # Class methods added by including HasEnum.
+      module ClassMethods
+        # :call-seq:
+        #   enum(klass)
+        #   enum(klass, as: name)
+        #
+        # Declares an attribute holding a member of `klass` and defines its methods.
+        #
+        # * `klass` - The enum, a subclass of Base
+        # * `as:` - The name of the reader and the writer, as a Symbol or a String.
+        #   Defaults to the enum class name, downcased and without its namespace
+        #   (`color` for `Color`, `state` for `Issue::State`)
+        #
+        # Defines these instance methods, e.g. for `enum Status`:
+        #
+        # * reader (`status`) - Returns the current member, `nil` until one is set
+        # * writer (`status=`) - Sets the current member; raises Error unless
+        #   it gets a member of `klass`
+        # * a predicate per member (`draft?`) - Whether it is the current member
+        # * a setter per member (`draft!`) - Makes it the current member
+        #
+        # Predicates and setters are named after the members' values, whatever `as:` is.
         def enum(klass, as: demodulize(klass))
           name = as.to_s
           ivar_name = :"@#{name}_enum"
@@ -86,19 +89,16 @@ module Shy
 
         private
 
-        # :nodoc:
         def demodulize(klass)
           klass.name[(klass.name.rindex("::")&.+(2) || 0)..].downcase
         end
 
-        # :nodoc:
         def define_enum_getter(name, ivar_name)
           define_method(name) do
             instance_variable_get(ivar_name)
           end
         end
 
-        # :nodoc:
         def define_enum_setter(klass, name, ivar_name)
           define_method("#{name}=") do |type_to_set|
             raise(Error, "Type error. Enum type must be a #{klass}") unless type_to_set.is_a?(klass)
@@ -107,7 +107,6 @@ module Shy
           end
         end
 
-        # :nodoc:
         def define_enum_methods(klass, ivar_name)
           klass.registry.each do |type|
             define_method("#{type.value}!") do
