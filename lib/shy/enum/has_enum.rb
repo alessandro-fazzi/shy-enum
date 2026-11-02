@@ -8,6 +8,9 @@ module Shy
     # instances get a reader and a writer for the current member, plus a
     # predicate and a setter for every member.
     #
+    # Do **not** use it in ActiveRecord models: its `enum` would override Rails'
+    # `enum`. Use ActiveRecordEnum instead.
+    #
     # ## Example
     #
     # ```ruby

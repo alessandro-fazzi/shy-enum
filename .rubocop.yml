@@ -18,3 +18,13 @@ Metrics/ClassLength:
 
 Minitest/MultipleAssertions:
   Enabled: false
+
+# Example classes shared by the tests and by bin/console.
+Style/OneClassPerFile:
+  Exclude:
+    - "test/support/**/*"
+
+# The variables are only used inside IRB.
+Lint/UselessAssignment:
+  Exclude:
+    - "bin/console"

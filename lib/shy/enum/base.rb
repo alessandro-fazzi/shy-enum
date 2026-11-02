@@ -76,7 +76,21 @@ module Shy
         include Enumerable
 
         # All enum members, in declaration order. Same as ::all
-        attr_reader :registry
+        #
+        # Once the enum is frozen, it returns the same frozen Array on every
+        # call; before, a new Array each time.
+        def registry = @registry || index.values
+
+        # Closes the enum: no member can be added after it. It freezes the members
+        # lookup too, and caches ::registry and ::values.
+        def freeze
+          if index
+            index.each_key(&:freeze).freeze
+            @registry = index.values.freeze
+            @values = index.keys.freeze
+          end
+          super
+        end
 
         # Yields each enum member in declaration order
         #
@@ -84,14 +98,12 @@ module Shy
         def each(&)
           return enum_for(__method__) { size } unless block_given?
 
-          registry.each(&)
+          index.each_value(&)
           self
         end
 
         # Returns the number of members
-        def size
-          registry.size
-        end
+        def size = index.size
 
         # Checks whether `mod` is included in the enum, like `Module#include?`
         #
@@ -113,27 +125,25 @@ module Shy
         # * `obj` - An enum member, or the value of an enum member
         #
         # Looks up like ::[], `before_cast` included.
-        def member?(obj)
-          !self[obj].nil?
-        end
+        def member?(obj) = !self[obj].nil?
 
         # Returns all enum members, in declaration order
-        def all
-          registry
-        end
+        def all = registry
 
         # Returns the values of all enum members, in declaration order
-        def values
-          all.map(&:value)
-        end
+        #
+        # Once the enum is frozen, it returns the same frozen Array on every
+        # call; before, a new Array each time.
+        def values = @values || index.keys
 
         # Finds an enum member by member or value
         #
         # * `obj` - An enum member, or the value of an enum member
         #
         # Instances of the enum are looked up among the members, any other object
-        # among the values, after `before_cast`. Values are compared with `==`,
-        # so `"1"` doesn't match `1` unless `before_cast` converts it.
+        # among the values, after `before_cast`. Values are looked up in a Hash,
+        # so they are compared with `eql?`: `"1"` doesn't match `1`, and neither
+        # does `1.0`, unless `before_cast` converts it.
         #
         # Returns `nil` if the enum member is not found
         #
@@ -142,10 +152,14 @@ module Shy
         # Color["brown"] #=> nil
         # ```
         def [](obj)
-          return find { it == obj } if obj.is_a?(self)
+          if obj.is_a?(self)
+            member = index[obj.value]
+            return member if member.equal?(obj)
 
-          value = before_cast(obj)
-          find { it.value == value }
+            return
+          end
+
+          index[before_cast(obj)]
         end
 
         # Finds an enum member by member or value, like ::[]
@@ -153,19 +167,18 @@ module Shy
         # * `obj` - An enum member, or the value of an enum member
         #
         # Raises Error if the enum member is not found
-        def fetch(obj)
-          self[obj] || raise(Error, "Unknown member for value #{obj.inspect}")
-        end
+        def fetch(obj) = self[obj] || raise(Error, "Unknown member for value #{obj.inspect}")
         alias cast fetch
 
-        # Called when a class inherits from this class. Ensures the registry of enum values
-        # is properly copied to the subclass to maintain independent registries for each
-        # enum class hierarchy.
+        # Called when a class inherits from this class. The subclass gets a copy
+        # of the members by value, so it inherits the members of the enum without
+        # adding its own to it. The copy is not frozen, so the subclass is open.
+        # The cached registry is not copied: it is built when the subclass freezes.
         #
         # * `subclass` - The class that is inheriting from this class
         def inherited(subclass) # :nodoc:
           super
-          subclass.instance_variable_set(:@registry, (registry && registry.dup) || [])
+          subclass.instance_variable_set(:@index, (index && index.dup) || {})
         end
 
         def const_added(name) # :nodoc:
@@ -176,28 +189,33 @@ module Shy
           object.name = name.to_s
           object.value ||= name.to_s.downcase
 
-          raise Error, "Duplicated member" if registry.find { it.value == object.value }
+          raise Error, "Duplicated member" if index.key?(object.value)
 
           object.freeze
-
-          registry << object
+          register(object)
         end
 
         private
 
+        def register(member) = index[member.value] = member
+
+        # The members by value, in declaration order (a Hash keeps the insertion
+        # order). The single source of the members: ::[] is a Hash lookup, and
+        # ::registry and ::each read from it.
+        attr_reader :index
+
+        # :doc:
         # Converts the object looked up by `[]`, `fetch` and `member?` before
         # comparing it with the values. Enum members are not converted.
         #
         # Returns the object unchanged; override it to accept other inputs, e.g.
         # strings for integer values:
         #
-        # ```
+        # ```ruby
         # def self.before_cast(obj) = Integer(obj, exception: false)
         # private_class_method :before_cast
         # ```
-        def before_cast(obj)
-          obj
-        end
+        def before_cast(obj) = obj
       end
 
       # The position of the enum member in declaration order, starting from 1
@@ -221,7 +239,7 @@ module Shy
         raise(Error, "Can't add new values to a closed Enum") if self.class.frozen?
 
         @value = value
-        @ordinal = self.class.registry.size.next
+        @ordinal = self.class.size.next
         attributes.each { |key, attribute| define_attribute(key, attribute) }
         after_initialize
       end
@@ -239,9 +257,7 @@ module Shy
       private_class_method :new
 
       # Returns the value as a String, e.g. `"1"` for a value of `1`
-      def to_s
-        value.to_s
-      end
+      def to_s = value.to_s
 
       # Returns a string representation of the enum member, with its value and
       # extra attributes, e.g. `#<Color::Red value="red", hex="ff0000">`
@@ -263,20 +279,14 @@ module Shy
       # Status::Draft < Status::Published #=> true
       # Status::Draft <=> "draft"         #=> nil
       # ```
-      def <=>(other)
-        return nil unless other.is_a?(self.class)
-
-        ordinal <=> other.ordinal
-      end
+      def <=>(other) = other.is_a?(self.class) ? ordinal <=> other.ordinal : nil
       include Comparable
 
       private
 
       # The instance variables shown by #inspect: all but `@name` and `@ordinal`.
       # Override it to choose what to show.
-      def instance_variables_to_inspect
-        instance_variables - %i[@name @ordinal]
-      end
+      def instance_variables_to_inspect = instance_variables - %i[@name @ordinal]
 
       def define_attribute(key, attribute)
         if Base.method_defined?(key) || Base.private_method_defined?(key, false)

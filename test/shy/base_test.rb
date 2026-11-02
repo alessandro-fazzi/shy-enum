@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 module Shy
   class ColorEnumTest < Minitest::Test
@@ -55,6 +55,32 @@ module Shy
 
     def test_registry_and_all_are_aliases
       assert_equal @subject.all, @subject.registry
+    end
+
+    def test_freeze_caches_a_frozen_registry
+      assert_predicate @subject.registry, :frozen?
+      assert_same @subject.registry, @subject.all
+      assert_predicate @subject.send(:index), :frozen?
+    end
+
+    def test_freeze_caches_frozen_values
+      assert_equal %w[pink red violet], @subject.values
+      assert_predicate @subject.values, :frozen?
+      assert_same @subject.values, @subject.values
+    end
+
+    def test_values_of_an_open_enum_are_a_copy
+      OpenEnum.values << :intruder
+
+      refute_includes OpenEnum.values, :intruder
+      assert_equal OpenEnum.all.map(&:value), OpenEnum.values
+    end
+
+    def test_registry_of_an_open_enum_is_a_copy
+      OpenEnum.all << :intruder
+
+      refute_includes OpenEnum.all, :intruder
+      refute_predicate OpenEnum.all, :frozen?
     end
 
     def test_each_yields_members_in_declaration_order
@@ -172,6 +198,13 @@ module Shy
     def test_brackets_compare_values_strictly
       assert_same IntegerSubject::One, IntegerSubject[1]
       assert_nil IntegerSubject["1"]
+    end
+
+    # Values are looked up in a Hash, so they are compared with `eql?`, not `==`:
+    # `1 == 1.0` but `!1.eql?(1.0)`
+    def test_brackets_compare_values_with_eql
+      assert_nil IntegerSubject[1.0]
+      refute IntegerSubject.member?(1.0) # rubocop:disable Minitest/RefuteIncludes
     end
 
     def test_fetch_with_a_member_or_a_value
@@ -353,6 +386,7 @@ module Shy
 
     def test_enum_can_be_subclassed
       assert_equal %w[pink red violet yellow orange], SubjectSubclass.values
+      assert_equal [1, 2, 3, 4, 5], SubjectSubclass.map(&:ordinal)
     end
 
     def test_subclassing_does_not_affect_the_original_enum
@@ -413,6 +447,11 @@ module Shy
 
     def test_to_s_returns_a_string_with_integer_value
       assert_kind_of String, IntegerSubject::One.to_s
+    end
+
+    def test_core_does_not_load_rails
+      refute defined?(::ActiveModel)
+      refute defined?(::ActiveRecord)
     end
   end
 end

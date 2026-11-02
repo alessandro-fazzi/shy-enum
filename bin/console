@@ -2,10 +2,31 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
-require "shy/enum"
+require "shy/enum/active_record"
 
-# You can add fixtures and/or initialization code here to make experimenting
-# with your gem easier. You can also use a different console, if you like.
+# The examples are the classes the tests run against, so everything here is covered by them.
+$LOAD_PATH.unshift File.expand_path("../test", __dir__)
+require "support/active_record_models" # in-memory SQLite, ApplicationRecord, Post
+require "support/active_model_models"  # Ticket
+require "support/has_enum_models"      # Flower
 
+post = Post.create!(title: "Hello", status: Status::Published, priority: Priority::High)
+ticket = Ticket.new(status: "inprogress", priority: 1)
+flower = Flower.new.tap(&:pink!)
+
+puts <<~MSG
+  Loaded shy/enum/active_record on an in-memory SQLite database (examples from test/support).
+
+  ActiveRecord - model Post (table posts), record in `post`:
+    post.status, post.published?, post.priority_low!, Post.draft, Post.where(status: "published")
+  ActiveModel  - model Ticket (no database), object in `ticket`:
+    ticket.status, ticket.priority, ticket.status = "bogus"; ticket.valid?
+  HasEnum      - class Flower with enum Color, object in `flower`:
+    flower.color, flower.red!, flower.red?, flower.color = Color::Violet
+  Enums: Status, Priority, Color.
+MSG
+
+# IRB.start would evaluate in TOPLEVEL_BINDING, where `post`, `ticket` and `flower`
+# don't exist: open IRB in this binding instead.
 require "irb"
-IRB.start(__FILE__)
+binding.irb(show_code: false) # rubocop:disable Lint/Debugger

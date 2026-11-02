@@ -4,6 +4,8 @@ Shy::Enum is a small, dependency-free way to define enums in plain Ruby. Each me
 frozen object with a name, a value and an ordinal position, so members are comparable, can be
 looked up by value and carry extra attributes. A closed enum can't gain new members, and
 [`HasEnum`](#hasenum) plugs an enum into any class with a reader, a writer and predicate methods.
+Optional integrations for [ActiveModel](RAILS.md#activemodel) and
+[ActiveRecord](RAILS.md#activerecord) are opt-in.
 
 ```ruby
 class Color < Shy::Enum::Base
@@ -18,7 +20,7 @@ Color::Red       #=> #<Color::Red value="red">
 Color::Red.value #=> "red"
 ```
 
-It requires Ruby 4.0 or later. See [Installation](#installation) to add it to a project.
+See [Installation](#installation) to add it to a project.
 
 ## Usage
 
@@ -103,8 +105,10 @@ Attributes are already set when `after_initialize` runs. An attribute can't over
 an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`:
 
 ```ruby
-Color.send(:new, name: "foo")
-#=> Shy::Enum::Error "`name` is a reserved method and can't be overridden by an attribute reader"
+class Color < Shy::Enum::Base
+  Red = new(name: "foo")
+  #=> Shy::Enum::Error "`name` is a reserved method and can't be overridden by an attribute reader"
+end
 ```
 
 ### After initialize
@@ -171,7 +175,8 @@ Define the methods before calling `freeze`: a frozen enum can't be changed any m
 
 `inspect` shows the value and the instance variables of the member, mimicking `Data`.
 Each [extra attribute](#extra-attributes) is stored in an instance variable of the same
-name (`hex` in `@hex`), which is why it shows up here:
+name (`hex` in `@hex`), which is why it shows up here, with the `Color` from
+[Extra attributes](#extra-attributes):
 
 ```ruby
 Color::Red.inspect   #=> #<Color::Red value="red", hex="ff0000">
@@ -251,7 +256,7 @@ when Status::Published
 when Status::Archived
   puts "No longer active"
 end
-#=> "Live and ready"
+# prints "Live and ready"
 
 # You can also use it directly
 Status::Published === status #=> true
@@ -260,7 +265,8 @@ Status::Draft === status    #=> false
 
 ### Iterating members
 
-The enum class is `Enumerable` over its members, in declaration order.
+The enum class is `Enumerable` over its members, in declaration order. With the `Color`
+from the top of this page:
 
 ```ruby
 Color.each { puts it.name }    # prints Pink, Red, Violet
@@ -274,16 +280,18 @@ Color.size                     #=> 3
 `fetch` (aliased as `cast`) does the same, but raises `Shy::Enum::Error`.
 
 ```ruby
-Color["red"]          #=> Color::Red
-Color[Color::Red]     #=> Color::Red
+Color["red"]          #=> #<Color::Red value="red">
+Color[Color::Red]     #=> #<Color::Red value="red">
 Color["brown"]        #=> nil
-Color.fetch("red")    #=> Color::Red
+Color.fetch("red")    #=> #<Color::Red value="red">
 Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Error)
 ```
 
-Values are compared strictly, so `Status["1"]` doesn't find a member whose value is `1`.
-To convert the input before the lookup, e.g. strings coming from request params,
-override the private `before_cast` class method. Define it before calling `freeze`:
+Values are compared strictly: with the `Status` from [Setting integer values](#setting-integer-values),
+`Status["1"]` doesn't find the member whose value is `1`. Lookup uses a Hash, so values are compared
+with `eql?`, not `==`: `Status[1.0]` doesn't find `1` either. To convert the input before the
+lookup, e.g. strings coming from request params, override the private `before_cast` class method.
+Define it before calling `freeze`:
 
 ```ruby
 class Status < Shy::Enum::Base
@@ -315,7 +323,8 @@ Color.member?("brown")    #=> false
 ### Exceptions
 
 Errors raised by the library are instances of `Shy::Enum::Error`, except for `FrozenError`
-when modifying a member:
+when modifying a member and `TypeError` when `include?` gets anything but a module (see
+[Looking up members](#looking-up-members)):
 
 ```ruby
 # When trying to add a new member to a frozen enum
@@ -342,11 +351,15 @@ Color::Red.value = "new_value"
 #=> FrozenError "can't modify frozen Color: #<Color::Red value=\"red\">"
 ```
 
+The Rails integrations raise their own errors too, see [ActiveModel](RAILS.md#activemodel) and
+[ActiveRecord](RAILS.md#activerecord).
+
 ### Freezing
 
 Members are always frozen as soon as their constant is defined. The enum class is not:
 you freeze it yourself by calling `freeze` after the last member. Until then the enum
-is open and can still gain members, e.g. through `send(:new)`.
+is open and can still gain members: any member assigned to a new constant joins it, e.g.
+`Color.const_set(:Black, Color.send(:new))`. A member not assigned to a constant is not added.
 
 ```ruby
 class Color < Shy::Enum::Base
@@ -360,6 +373,21 @@ Color.send(:new) # raises: Can't add new values to a closed Enum (Shy::Enum::Err
 
 Always end the enum with `freeze`: it keeps the set of members fixed. Once frozen, the class
 can't be changed any more, so define everything you need, such as `before_cast`, before it.
+
+Freezing also makes `all` (and `registry`) and `values` cheaper: a frozen enum builds their
+Arrays once and returns the same frozen Arrays on every call, while an open enum builds new
+ones each time. Lookups (`[]`, `fetch`, `member?`), `each` and `size` allocate nothing either way.
+Objects allocated per call on an enum with 20 members:
+
+| Call      | Open | Frozen |
+|-----------|-----:|-------:|
+| `all`     |    1 |      0 |
+| `values`  |    1 |      0 |
+| `[]`      |    0 |      0 |
+| `each {}` |    0 |      0 |
+
+The Arrays returned by a frozen enum are frozen: `Color.all << x` raises `FrozenError`. Call
+`dup` on them if you need to change them.
 
 ## HasEnum
 
@@ -391,6 +419,10 @@ flower.color #=> #<Color::Red value="red">
 - a predicate `value?` and a setter `value!` for each member, named after its value
   (`pink?` and `pink!`)
 
+The values must make valid method names: with Integer values the predicates and setters are
+named e.g. `0?` and `0!`, and can only be called with `send`. [`shy_enum`](RAILS.md#activerecord) names
+them after the member name instead.
+
 To pick another name for the reader and the writer, pass `as:` (a Symbol or a String).
 Predicates and setters are not affected:
 
@@ -414,6 +446,13 @@ raises `Shy::Enum::Error`:
 flower.color = "red" #=> Shy::Enum::Error "Type error. Enum type must be a Color"
 ```
 
+## Rails
+
+Opt-in integrations for Rails ~> 8.1, documented in [RAILS.md](RAILS.md):
+
+- [ActiveModel](RAILS.md#activemodel) - an `ActiveModel::Type` for enum attributes
+- [ActiveRecord](RAILS.md#activerecord) - the `shy_enum` macro, modeled on Rails' `enum`
+
 ## Installation
 
 It requires Ruby 4.0 or later. Install the gem and add to the application's Gemfile by executing:
@@ -426,12 +465,20 @@ Then require it:
 require "shy/enum"
 ```
 
+The Rails integrations are opt-in and need activemodel or activerecord ~> 8.1 in your bundle:
+`require "shy/enum/active_model"` or `require "shy/enum/active_record"`. See [Rails](#rails).
+
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests.
-You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake` to run all the
+suites and RuboCop. There are three test suites, each in its own process: `rake test` (core, no Rails
+loaded), `rake test:active_model` and `rake test:active_record`; `rake test:all` runs all three. The
+ActiveRecord suite uses an in-memory SQLite database. You can also run `bin/console` for an interactive prompt that will allow
+you to experiment.
 
-Run `COVERAGE=1 rake test` to also print a line and branch coverage report after the test suite runs.
+Add `COVERAGE=1` to print a line and branch coverage report. A single suite reports only the files
+it tests, from that run only; `COVERAGE=1 rake test:all` prints one report for all of `lib/`,
+merging the three suites.
 
 Run `bundle exec rake rdoc` to generate the API documentation from this README and the code comments
 into `docs/`, then open `docs/index.html`. Run `bundle exec rake rerdoc` to rebuild it from scratch:
