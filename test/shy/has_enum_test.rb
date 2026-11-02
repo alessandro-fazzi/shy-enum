@@ -62,6 +62,54 @@ module Shy
       assert_predicate @subject, :pink?
     end
 
+    class CustomNameSubject
+      include Shy::Enum::HasEnum
+
+      enum Color, as: :hue
+    end
+
+    class StringNameSubject
+      include Shy::Enum::HasEnum
+
+      enum Color, as: "tint"
+    end
+
+    def test_custom_accessor_name
+      subject = CustomNameSubject.new
+
+      assert_respond_to subject, :hue
+      assert_respond_to subject, :hue=
+      assert_respond_to subject, :pink?
+      assert_respond_to subject, :pink!
+      refute_respond_to subject, :color
+      refute_respond_to subject, :color=
+    end
+
+    def test_custom_accessor_reads_and_writes
+      subject = CustomNameSubject.new
+      subject.hue = Color::Red
+
+      assert_equal Color::Red, subject.hue
+      subject.pink!
+
+      assert_equal Color::Pink, subject.hue
+      assert_predicate subject, :pink?
+    end
+
+    def test_custom_accessor_enforces_type
+      error = assert_raises Shy::Enum::Error do
+        CustomNameSubject.new.hue = "red"
+      end
+      assert_equal "Type error. Enum type must be a Shy::HasEnumTest::Color", error.message
+    end
+
+    def test_custom_accessor_name_as_string
+      subject = StringNameSubject.new
+      subject.tint = Color::Violet
+
+      assert_equal Color::Violet, subject.tint
+    end
+
     class ::TopLevelSeason < Shy::Enum::Base
       Spring = new
 

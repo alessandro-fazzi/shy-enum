@@ -57,16 +57,30 @@ module Shy
     # post.status      # Get current status
     # post.status = Status::PUBLISHED  # Set status with type checking
     # ```
+    #
+    # ## Custom accessor name
+    #
+    # Use `as:` to name the reader and the writer yourself:
+    # ```ruby
+    # class Post
+    #   include Shy::Enum::HasEnum
+    #   enum Status, as: :state
+    # end
+    #
+    # post.state = Status::DRAFT
+    # post.state # => Status::DRAFT
+    # ```
     module HasEnum
       def self.included(base) # :nodoc:
         base.extend(ClassMethods)
       end
 
       module ClassMethods # :nodoc:
-        def enum(klass)
-          ivar_name = :"@#{demodulize(klass)}_enum"
-          define_enum_getter(klass, ivar_name)
-          define_enum_setter(klass, ivar_name)
+        def enum(klass, as: demodulize(klass))
+          name = as.to_s
+          ivar_name = :"@#{name}_enum"
+          define_enum_getter(name, ivar_name)
+          define_enum_setter(klass, name, ivar_name)
           define_enum_methods(klass, ivar_name)
         end
 
@@ -78,15 +92,15 @@ module Shy
         end
 
         # :nodoc:
-        def define_enum_getter(klass, ivar_name)
-          define_method(demodulize(klass)) do
+        def define_enum_getter(name, ivar_name)
+          define_method(name) do
             instance_variable_get(ivar_name)
           end
         end
 
         # :nodoc:
-        def define_enum_setter(klass, ivar_name)
-          define_method("#{demodulize(klass)}=") do |type_to_set|
+        def define_enum_setter(klass, name, ivar_name)
+          define_method("#{name}=") do |type_to_set|
             raise(Error, "Type error. Enum type must be a #{klass}") unless type_to_set.is_a?(klass)
 
             instance_variable_set(ivar_name, type_to_set)

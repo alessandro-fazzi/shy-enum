@@ -392,6 +392,22 @@ flower.color #=> #<Color::Red value="red">
 - a predicate `value?` and a setter `value!` for each member, named after its value
   (`pink?` and `pink!`)
 
+To pick another name for the reader and the writer, pass `as:` (a Symbol or a String).
+Predicates and setters are not affected:
+
+```ruby
+class Flower
+  include Shy::Enum::HasEnum
+
+  enum Color, as: :petals
+end
+
+flower = Flower.new
+flower.petals = Color::Red
+flower.petals #=> #<Color::Red value="red">
+flower.red? #=> true
+```
+
 The writer only accepts members of that enum. Anything else, including a matching value,
 raises `Shy::Enum::Error`:
 
