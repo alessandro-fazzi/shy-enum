@@ -66,6 +66,12 @@ Role::USER.value #=> "regular_user"
 Role::GUEST.value #=> "guest"
 ```
 
+`to_s` always returns the value as a String:
+
+```ruby
+Status::PUBLISHED.to_s #=> "1"
+```
+
 ### Extra attributes
 
 Keyword arguments passed to `new` become attributes with a reader, like a Struct.
@@ -146,6 +152,14 @@ Status::DRAFT < Status::PUBLISHED    #=> true
 Status::PUBLISHED > Status::DRAFT    #=> true
 Status::ARCHIVED > Status::PUBLISHED #=> true
 Status::DRAFT < Status::ARCHIVED    #=> true
+```
+
+Members are only comparable with members of the same enum: with any other object
+`<=>` returns `nil` and `==` returns `false`.
+
+```ruby
+Status::DRAFT <=> "draft" #=> nil
+Status::DRAFT == "draft"  #=> false
 ```
 
 ### Using in case statements
