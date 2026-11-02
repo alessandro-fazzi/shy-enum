@@ -10,7 +10,8 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Small, dependency-free enums for plain Ruby"
   spec.description = "Small, dependency-free enums for plain Ruby: frozen, comparable members " \
-                     "with values and extra attributes, and a mixin to use them in any class."
+                     "with values and extra attributes, and a mixin to use them in any class. " \
+                     "Optional ActiveModel and ActiveRecord integration."
   spec.homepage = "https://github.com/alessandro-fazzi/shy-enum"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 4.0"

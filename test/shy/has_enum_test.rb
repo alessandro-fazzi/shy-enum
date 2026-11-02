@@ -1,25 +1,12 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
+require "support/has_enum_models"
 
 module Shy
   class HasEnumTest < Minitest::Test
-    class Color < Shy::Enum::Base
-      Pink = new
-      Red = new
-      Violet = new
-
-      freeze
-    end
-
-    class Subject
-      include Shy::Enum::HasEnum
-
-      enum Color
-    end
-
     def setup
-      @subject = Subject.new
+      @subject = Flower.new
     end
 
     def test_generated_methods
@@ -47,7 +34,7 @@ module Shy
       error = assert_raises Shy::Enum::Error do
         @subject.color = String.new("Wooof")
       end
-      assert_equal "Type error. Enum type must be a Shy::HasEnumTest::Color", error.message
+      assert_equal "Type error. Enum type must be a Color", error.message
     end
 
     def test_setting_enum_with_bang_method
@@ -62,20 +49,20 @@ module Shy
       assert_predicate @subject, :pink?
     end
 
-    class CustomNameSubject
+    class CustomNameFlower
       include Shy::Enum::HasEnum
 
       enum Color, as: :hue
     end
 
-    class StringNameSubject
+    class StringNameFlower
       include Shy::Enum::HasEnum
 
       enum Color, as: "tint"
     end
 
     def test_custom_accessor_name
-      subject = CustomNameSubject.new
+      subject = CustomNameFlower.new
 
       assert_respond_to subject, :hue
       assert_respond_to subject, :hue=
@@ -86,7 +73,7 @@ module Shy
     end
 
     def test_custom_accessor_reads_and_writes
-      subject = CustomNameSubject.new
+      subject = CustomNameFlower.new
       subject.hue = Color::Red
 
       assert_equal Color::Red, subject.hue
@@ -98,13 +85,13 @@ module Shy
 
     def test_custom_accessor_enforces_type
       error = assert_raises Shy::Enum::Error do
-        CustomNameSubject.new.hue = "red"
+        CustomNameFlower.new.hue = "red"
       end
-      assert_equal "Type error. Enum type must be a Shy::HasEnumTest::Color", error.message
+      assert_equal "Type error. Enum type must be a Color", error.message
     end
 
     def test_custom_accessor_name_as_string
-      subject = StringNameSubject.new
+      subject = StringNameFlower.new
       subject.tint = Color::Violet
 
       assert_equal Color::Violet, subject.tint
@@ -116,14 +103,14 @@ module Shy
       freeze
     end
 
-    class TopLevelSubject
+    class TopLevelFlower
       include Shy::Enum::HasEnum
 
       enum ::TopLevelSeason
     end
 
     def test_generated_method_names_for_a_top_level_enum_class
-      subject = TopLevelSubject.new
+      subject = TopLevelFlower.new
 
       assert_respond_to subject, :toplevelseason
       assert_respond_to subject, :toplevelseason=

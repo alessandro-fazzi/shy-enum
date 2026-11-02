@@ -11,6 +11,8 @@ module Shy
   #
   # * Base - subclass it to define an enum and its members
   # * HasEnum - include it to plug an enum into any class
+  # * ActiveModelType - opt-in ActiveModel type, `require "shy/enum/active_model"`
+  # * ActiveRecordEnum - opt-in ActiveRecord macro, `require "shy/enum/active_record"`
   # * Error - raised on invalid definitions, lookups and assignments
   #
   # ```ruby
