@@ -100,6 +100,7 @@ GEM
       simplecov
       terminal-table
     sqlite3 (2.10.2-arm64-darwin)
+    sqlite3 (2.10.2-x86_64-linux-gnu)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
     timeout (0.6.1)
@@ -113,6 +114,7 @@ GEM
 
 PLATFORMS
   arm64-darwin-23
+  x86_64-linux
 
 DEPENDENCIES
   activemodel (~> 8.1)
