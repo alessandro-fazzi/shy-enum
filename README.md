@@ -7,6 +7,11 @@
 Studying [typesafe_enum](https://github.com/dmolesUC/typesafe_enum/tree/master) and
 [ruby_enum](https://github.com/dblock/ruby-enum) and [literal](https://literal.fun/docs/enums.html)
 
+Shy::Enum is a small, dependency-free way to define enums in plain Ruby. Each member is a
+frozen object with a name, a value and an ordinal position, so members are comparable, can be
+looked up by value and carry extra attributes. A closed enum can't gain new members, and
+[`HasEnum`](#hasenum) plugs an enum into any class with a reader, a writer and predicate methods.
+
 ```ruby
 class Color < Shy::Enum::Base
   Pink = new
@@ -16,22 +21,24 @@ class Color < Shy::Enum::Base
   freeze
 end
 
-class Flower
-  include Shy::Enum::HasEnum
+Color::Red       #=> #<Color::Red value="red">
+Color::Red.value #=> "red"
+```
 
-  enum Color
+### Default values
+
+```ruby
+class Color < Shy::Enum::Base
+  Red = new       # value is automatically set to "red"
+  Green = new     # value is automatically set to "green"
+  Blue = new      # value is automatically set to "blue"
+
+  freeze
 end
 
-flower = Flower.new
-flower.color #=> nil
-flower.pink!
-flower.color #=> #<Color::Pink value="pink">
-flower.pink? #=> true
-flower.violet? #=> false
-flower.color = Color::Red
-flower.color #=> #<Color::Red value="red">
-
-Color.send(:new, :Brown) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
+Color::Red.value #=> "red"
+Color::Green.value #=> "green"
+Color::Blue.value #=> "blue"
 ```
 
 ### Setting integer values
@@ -50,7 +57,16 @@ Status::Published.value #=> 1
 Status::Archived.value #=> 2
 ```
 
-### Setting string values
+`to_s` always returns the value as a String:
+
+```ruby
+Status::Published.to_s #=> "1"
+```
+
+### Setting arbitrary string values
+
+By default member value will automatically be set to the downcased name (String),
+but you can set arbitrary values.
 
 ```ruby
 class Role < Shy::Enum::Base
@@ -64,12 +80,6 @@ end
 Role::Admin.value #=> "administrator"
 Role::User.value #=> "regular_user"
 Role::Guest.value #=> "guest"
-```
-
-`to_s` always returns the value as a String:
-
-```ruby
-Status::Published.to_s #=> "1"
 ```
 
 ### Extra attributes
@@ -86,17 +96,85 @@ class Color < Shy::Enum::Base
   freeze
 end
 
-Color::Red.hex      #=> "ff0000"
-Color::Green.value  #=> "verde"
-Color::Blue.hex     #=> nil
+Color::Red.hex     #=> "ff0000"
+Color::Green.hex   #=> "00ff00"
+Color::Green.value #=> "verde"
+Color::Blue.hex    #=> nil
 ```
 
 Attributes are already set when `after_initialize` runs. An attribute can't override
-an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`.
+an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`:
+
+```ruby
+Color.send(:new, name: "foo")
+#=> Shy::Enum::Error "`name` is a reserved method and can't be overridden by an attribute reader"
+```
+
+### After initialize
+
+Override `after_initialize` to refine a member right after it is built, e.g. to derive
+extra state from its attributes. There's no need to call `super` or to override `initialize`.
+
+```ruby
+class Color < Shy::Enum::Base
+  attr_reader :label
+
+  def after_initialize
+    @label = "##{hex.upcase}"
+  end
+
+  Red = new(hex: "ff0000")
+
+  freeze
+end
+
+Color::Red.label #=> "#FF0000"
+```
+
+The [extra attributes](#extra-attributes) are already set and so are the positional
+value, when given, and the ordinal. The `name` is not: it's assigned when the constant is
+defined, and so is the default value. The member is also still unfrozen, so it can be
+modified here.
+
+> [!IMPORTANT]
+> Define `after_initialize` before the members, as in the example: it runs while each
+> member is being built, so members declared above it won't call it.
+
+### Custom methods
+
+Members are plain Ruby objects, so you can add your own methods to the enum, on the
+members and on the class itself. Members are comparable, which makes a state machine
+easy to model:
+
+```ruby
+class IssueState < Shy::Enum::Base
+  New = new
+  Triaged = new
+  InProgress = new("in_progress")
+  Review = new
+  Done = new
+
+  # Between triage and completion
+  def working? = Triaged < self && self < Done
+
+  def self.working = select(&:working?)
+
+  freeze
+end
+
+IssueState::New.working?        #=> false
+IssueState::InProgress.working? #=> true
+IssueState::Done.working?       #=> false
+IssueState.working.map(&:value) #=> ["in_progress", "review"]
+```
+
+Define the methods before calling `freeze`: a frozen enum can't be changed any more.
 
 ### Inspecting members
 
-`inspect` shows the value and the instance variables of the member, like `Data`:
+`inspect` shows the value and the instance variables of the member, mimicking `Data`.
+Each [extra attribute](#extra-attributes) is stored in an instance variable of the same
+name (`hex` in `@hex`), which is why it shows up here:
 
 ```ruby
 Color::Red.inspect   #=> #<Color::Red value="red", hex="ff0000">
@@ -119,22 +197,6 @@ end
 ApiKey::Public.inspect #=> #<ApiKey::Public value="public">
 ```
 
-### Default values
-
-```ruby
-class Color < Shy::Enum::Base
-  Red = new       # value is automatically set to "red"
-  Green = new     # value is automatically set to "green"
-  Blue = new      # value is automatically set to "blue"
-
-  freeze
-end
-
-Color::Red.value #=> "red"
-Color::Green.value #=> "green"
-Color::Blue.value #=> "blue"
-```
-
 ### Comparing enum members
 
 The comparison is based on the enum member's ordinal position, which is assigned in declaration order.
@@ -152,6 +214,12 @@ Status::Draft < Status::Published    #=> true
 Status::Published > Status::Draft    #=> true
 Status::Archived > Status::Published #=> true
 Status::Draft < Status::Archived    #=> true
+
+Status::Draft <=> Status::Published     #=> -1
+Status::Published <=> Status::Published #=> 0
+Status::Archived <=> Status::Published  #=> 1
+Status::Draft == Status::Draft          #=> true
+Status::Draft == Status::Published      #=> false
 ```
 
 Members are only comparable with members of the same enum: with any other object
@@ -201,13 +269,7 @@ The enum class is `Enumerable` over its members, in declaration order.
 Color.each { puts it.name }    # prints Pink, Red, Violet
 Color.map(&:value)             #=> ["pink", "red", "violet"]
 Color.size                     #=> 3
-Color.member?(Color::Red)      #=> true
-Color.member?("red")           #=> true
-Color.member?("brown")         #=> false
 ```
-
-`member?` checks members and values like `[]` does. `include?` keeps its `Module`
-meaning (included modules) and raises `TypeError` when given anything else.
 
 ### Looking up members
 
@@ -240,6 +302,18 @@ end
 Status["1"] #=> Status::Published
 ```
 
+`member?` tells whether `[]` would find something, so it accepts members and values and
+applies `before_cast` too.
+
+```ruby
+Color.member?(Color::Red) #=> true
+Color.member?("red")      #=> true
+Color.member?("brown")    #=> false
+```
+
+> [!NOTE]
+> `include?` is not implemented to preserve its `Module` meaning (included modules)
+
 ### Exceptions
 
 The following exceptions could be raised:
@@ -251,7 +325,7 @@ Color.send(:new, :Brown)
 
 # When trying to set an enum value with an instance of a different class
 flower.color = String.new("red")
-#=> Shy::Enum::Error "Type error. Enum type must be of the same class"
+#=> Shy::Enum::Error "Type error. Enum type must be a Color"
 
 # When trying to add a member with a duplicated value
 class Status < Shy::Enum::Base
@@ -269,6 +343,62 @@ Color::Red.instance_variable_set(:@value, "new_value")
 #=> FrozenError "can't modify frozen ...""
 ```
 
+### Freezing
+
+Members are always frozen as soon as their constant is defined. The enum class is not:
+you freeze it yourself by calling `freeze` after the last member. Until then the enum
+is open and can still gain members, e.g. through `send(:new)`.
+
+```ruby
+class Color < Shy::Enum::Base
+  Red = new
+
+  freeze # closes the enum
+end
+
+Color.send(:new, :Brown) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
+```
+
+Always end the enum with `freeze`: it keeps the set of members fixed. Once frozen, the class
+can't be changed any more, so define everything you need, such as `before_cast`, before it.
+
+## HasEnum
+
+`Shy::Enum::HasEnum` plugs an enum into any class, so its instances can hold one of the
+members. It is loaded together with the gem: `require "shy/enum"` is enough.
+
+Include the module and declare the enum with `enum`:
+
+```ruby
+class Flower
+  include Shy::Enum::HasEnum
+
+  enum Color
+end
+
+flower = Flower.new
+flower.color #=> nil
+flower.pink!
+flower.color #=> #<Color::Pink value="pink">
+flower.pink? #=> true
+flower.violet? #=> false
+flower.color = Color::Red
+flower.color #=> #<Color::Red value="red">
+```
+
+`enum` defines these methods on the class:
+- a reader and a writer named after the enum, downcased and without its namespace
+  (`color` and `color=` for `Color`, `state` for `Issue::State`)
+- a predicate `value?` and a setter `value!` for each member, named after its value
+  (`pink?` and `pink!`)
+
+The writer only accepts members of that enum. Anything else, including a matching value,
+raises `Shy::Enum::Error`:
+
+```ruby
+flower.color = "red" #=> Shy::Enum::Error "Type error. Enum type must be a Color"
+```
+
 ## Installation
 
 > [!NOTE]
@@ -276,25 +406,24 @@ Color::Red.instance_variable_set(:@value, "new_value")
 
 Install the gem and add to the application's Gemfile by executing:
 
-    $ bundle add shy-interactor --github "alessandro-fazzi/shy-enum"
-
-## Usage
-
-[test/shy/test_base.rb](test/shy/test_base.rb)
-[test/shy/test_has_enum.rb](test/shy/test_has_enum.rb)
-[test/test_helper.rb](test/test_helper.rb)
+    $ bundle add shy-enum --github "alessandro-fazzi/shy-enum"
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests.
+You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 Run `COVERAGE=1 rake test` to also print a line and branch coverage report after the test suite runs.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version
+number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git
+commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/alessandro-fazzi/shy-enum. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/alessandro-fazzi/shy-enum/blob/main/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/alessandro-fazzi/shy-enum. This project is
+intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the
+[code of conduct](https://github.com/alessandro-fazzi/shy-enum/blob/main/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -302,4 +431,5 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Shy::Enum project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/alessandro-fazzi/shy-enum/blob/main/CODE_OF_CONDUCT.md).
+Everyone interacting in the Shy::Enum project's codebases, issue trackers, chat rooms and mailing lists is expected to
+follow the [code of conduct](https://github.com/alessandro-fazzi/shy-enum/blob/main/CODE_OF_CONDUCT.md).
