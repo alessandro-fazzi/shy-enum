@@ -225,7 +225,7 @@ module Shy
 
       def define_attribute(key, attribute)
         if Base.method_defined?(key) || Base.private_method_defined?(key, false)
-          raise(Error, "Attribute `#{key}` conflicts with #{Base.instance_method(key).owner}##{key}")
+          raise(Error, "`#{key}` is a reserved method and can't be overridden by an attribute reader")
         end
 
         self.class.attr_reader(key) unless self.class.method_defined?(key)

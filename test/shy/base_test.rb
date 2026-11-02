@@ -267,14 +267,14 @@ module Shy
 
     def test_exception_when_attribute_conflicts_with_an_existing_method
       error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, name: "foo") }
-      assert_equal "Attribute `name` conflicts with Shy::Enum::Base#name", error.message
+      assert_equal "`name` is a reserved method and can't be overridden by an attribute reader", error.message
       error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, hash: 1) }
-      assert_equal "Attribute `hash` conflicts with Kernel#hash", error.message
+      assert_equal "`hash` is a reserved method and can't be overridden by an attribute reader", error.message
     end
 
     def test_exception_when_attribute_conflicts_with_a_private_method_of_base
       error = assert_raises(Shy::Enum::Error) { OpenEnum.send(:new, initialize: 1) }
-      assert_equal "Attribute `initialize` conflicts with Shy::Enum::Base#initialize", error.message
+      assert_equal "`initialize` is a reserved method and can't be overridden by an attribute reader", error.message
     end
 
     def test_attribute_can_shadow_a_private_kernel_method
