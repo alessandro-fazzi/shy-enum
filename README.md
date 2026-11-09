@@ -9,77 +9,59 @@ Optional integrations for [ActiveModel](RAILS.md#activemodel) and
 
 ```ruby
 class Color < Shy::Enum::Base
-  Pink = new
   Red = new
-  Violet = new
+  Green = new
+  Blue = new
 
   freeze
 end
 
-Color::Red       #=> #<Color::Red value="red">
-Color::Red.value #=> "red"
+Color::Green         #=> #<Color::Green value="green">
+Color::Green.name    #=> "Green"
+Color::Green.value   #=> "green"
+Color::Green.ordinal #=> 2
+Color::Green.to_s    #=> "green"
 ```
+
+Each member is a constant of the enum class. The ordinal is its position, starting from 1.
+`freeze` closes the enum: always end it this way, see [Freezing](#freezing).
 
 See [Installation](#installation) to add it to a project.
 
 ## Usage
 
-### Default values
+The examples below share a few enums: `Color` from the top of this page, `Priority` and `Role`
+from [Values](#values), `Currency` from [Extra attributes](#extra-attributes).
+
+### Values
+
+A member's value is its name, downcased, unless you pass one to `new`. Any object can be a
+value, as long as it's unique within the enum:
 
 ```ruby
-class Color < Shy::Enum::Base
-  Red = new       # value is automatically set to "red"
-  Green = new     # value is automatically set to "green"
-  Blue = new      # value is automatically set to "blue"
+class Priority < Shy::Enum::Base
+  Low = new(0)
+  Medium = new(1)
+  High = new(2)
 
   freeze
 end
 
-Color::Red.value #=> "red"
-Color::Green.value #=> "green"
-Color::Blue.value #=> "blue"
-```
-
-### Setting integer values
-
-```ruby
-class Status < Shy::Enum::Base
-  Draft = new(0)
-  Published = new(1)
-  Archived = new(2)
-
-  freeze
-end
-
-Status::Draft.value #=> 0
-Status::Published.value #=> 1
-Status::Archived.value #=> 2
-```
-
-`to_s` always returns the value as a String:
-
-```ruby
-Status::Published.to_s #=> "1"
-```
-
-### Setting arbitrary string values
-
-By default member value will automatically be set to the downcased name (String),
-but you can set arbitrary values.
-
-```ruby
 class Role < Shy::Enum::Base
   Admin = new("administrator")
   User = new("regular_user")
-  Guest = new("guest")
+  Guest = new
 
   freeze
 end
 
-Role::Admin.value #=> "administrator"
-Role::User.value #=> "regular_user"
-Role::Guest.value #=> "guest"
+Color::Red.value     #=> "red"
+Priority::High.value #=> 2
+Role::Admin.value    #=> "administrator"
+Role::Guest.value    #=> "guest"
 ```
+
+`to_s` always returns the value as a String: `Priority::High.to_s #=> "2"`.
 
 ### Extra attributes
 
@@ -87,26 +69,25 @@ Keyword arguments passed to `new` become attributes with a reader, like a Struct
 Members without an attribute return `nil`; the value stays the positional argument.
 
 ```ruby
-class Color < Shy::Enum::Base
-  Red = new(hex: "ff0000")
-  Green = new("verde", hex: "00ff00")
-  Blue = new
+class Currency < Shy::Enum::Base
+  Euro = new("EUR", symbol: "€", decimals: 2)
+  Yen = new("JPY", symbol: "¥", decimals: 0)
+  Bitcoin = new("BTC")
 
   freeze
 end
 
-Color::Red.hex     #=> "ff0000"
-Color::Green.hex   #=> "00ff00"
-Color::Green.value #=> "verde"
-Color::Blue.hex    #=> nil
+Currency::Euro.value      #=> "EUR"
+Currency::Euro.symbol     #=> "€"
+Currency::Yen.decimals    #=> 0
+Currency::Bitcoin.symbol  #=> nil
 ```
 
-Attributes are already set when `after_initialize` runs. An attribute can't override
-an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`:
+An attribute can't override an existing method, e.g. `new(name: "foo")` raises `Shy::Enum::Error`:
 
 ```ruby
-class Color < Shy::Enum::Base
-  Red = new(name: "foo")
+class Currency < Shy::Enum::Base
+  Euro = new(name: "foo")
   #=> Shy::Enum::Error "`name` is a reserved method and can't be overridden by an attribute reader"
 end
 ```
@@ -117,19 +98,20 @@ Override `after_initialize` to refine a member right after it is built, e.g. to 
 extra state from its attributes. There's no need to call `super` or to override `initialize`.
 
 ```ruby
-class Color < Shy::Enum::Base
+class Size < Shy::Enum::Base
   attr_reader :label
 
   def after_initialize
-    @label = "##{hex.upcase}"
+    @label = "#{width}x#{height}"
   end
 
-  Red = new(hex: "ff0000")
+  Small = new(width: 640, height: 480)
+  Large = new(width: 1920, height: 1080)
 
   freeze
 end
 
-Color::Red.label #=> "#FF0000"
+Size::Large.label #=> "1920x1080"
 ```
 
 The [extra attributes](#extra-attributes) are already set and so are the positional
@@ -141,10 +123,130 @@ modified here.
 > Define `after_initialize` before the members, as in the example: it runs
 > while each member is being built, so members declared above it won't call it.
 
+### Inspecting members
+
+`inspect` shows the value and the instance variables of the member, mimicking `Data`.
+Each [extra attribute](#extra-attributes) is stored in an instance variable of the same
+name (`symbol` in `@symbol`), which is why it shows up here:
+
+```ruby
+Currency::Euro.inspect    #=> #<Currency::Euro value="EUR", symbol="€", decimals=2>
+Currency::Bitcoin.inspect #=> #<Currency::Bitcoin value="BTC">
+```
+
+To choose what to show, override the private `instance_variables_to_inspect`:
+
+```ruby
+class ApiKey < Shy::Enum::Base
+  Public = new(token: "abc")
+
+  private
+
+  def instance_variables_to_inspect = %i[@value]
+
+  freeze
+end
+
+ApiKey::Public.inspect #=> #<ApiKey::Public value="public">
+```
+
+### Comparing members
+
+Members compare by ordinal, that is in declaration order:
+
+```ruby
+Priority::Low < Priority::High          #=> true
+Priority::High <=> Priority::Medium     #=> 1
+Priority::Low == Priority::Low          #=> true
+Priority::Low.between?(Priority::Low, Priority::Medium) #=> true
+```
+
+Members are only comparable with members of the same enum: with any other object
+`<=>` returns `nil` and `==` returns `false`, values included:
+
+```ruby
+Priority::Low <=> 0 #=> nil
+Priority::Low == 0  #=> false
+```
+
+### Using in case statements
+
+A member matches itself in a `case`, through `===`:
+
+```ruby
+case priority
+when Priority::High then page_someone
+when Priority::Medium, Priority::Low then open_ticket
+end
+```
+
+### Iterating members
+
+The enum class is `Enumerable` over its members, in declaration order:
+
+```ruby
+Color.each { puts it.name } # prints Red, Green, Blue
+Color.map(&:value)          #=> ["red", "green", "blue"]
+Color.size                  #=> 3
+```
+
+### Looking up members
+
+`[]` finds a member by member or by value and returns `nil` when nothing matches.
+`fetch` (aliased as `cast`) does the same, but raises `Shy::Enum::Error`.
+
+```ruby
+Color["red"]          #=> #<Color::Red value="red">
+Color[Color::Red]     #=> #<Color::Red value="red">
+Color["brown"]        #=> nil
+Color.fetch("red")    #=> #<Color::Red value="red">
+Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Error)
+```
+
+Use `fetch` where data from outside enters your code, e.g. a JSON payload, and pass the member
+around from there: invalid input fails right away instead of travelling as a String. An attribute
+that casts, such as [`shy_enum`](RAILS.md#assigning-values), does the lookup for you.
+
+Values are compared strictly: `Priority["1"]` and `Priority[1.0]` don't find the member whose
+value is `1`. To convert the input before the lookup, override the private `before_cast` class
+method. Here's `Priority` again, with `before_cast`:
+
+```ruby
+class Priority < Shy::Enum::Base
+  Low = new(0)
+  Medium = new(1)
+  High = new(2)
+
+  def self.before_cast(obj) = Integer(obj, exception: false)
+  private_class_method :before_cast
+
+  freeze
+end
+
+Priority["1"] #=> #<Priority::Medium value=1>
+```
+
+That's what you need for values coming from request params, which are always Strings: the
+Rails guide shows the whole round trip in
+[Integer values from params](RAILS.md#integer-values-from-params).
+
+`member?` tells whether `[]` would find something, so it accepts members and values and
+applies `before_cast` too.
+
+```ruby
+Color.member?(Color::Red) #=> true
+Color.member?("red")      #=> true
+Color.member?("brown")    #=> false
+```
+
+> [!NOTE]
+> Use `member?`, not `include?`. `include?` keeps its `Module` meaning (whether
+> a module is included) and raises `TypeError` when given anything but a module.
+
 ### Custom methods
 
 Members are plain Ruby objects, so you can add your own methods to the enum, on the
-members and on the class itself. Members are comparable, which makes a state machine
+members and on the class itself. Comparison and `Enumerable` make a state machine
 easy to model:
 
 ```ruby
@@ -165,160 +267,24 @@ end
 
 IssueState::New.working?        #=> false
 IssueState::InProgress.working? #=> true
-IssueState::Done.working?       #=> false
 IssueState.working.map(&:value) #=> ["in_progress", "review"]
 ```
 
-Define the methods before calling `freeze`: a frozen enum can't be changed any more.
+### Freezing
 
-### Inspecting members
-
-`inspect` shows the value and the instance variables of the member, mimicking `Data`.
-Each [extra attribute](#extra-attributes) is stored in an instance variable of the same
-name (`hex` in `@hex`), which is why it shows up here, with the `Color` from
-[Extra attributes](#extra-attributes):
+Members are always frozen as soon as their constant is defined. The enum class is not:
+you freeze it yourself by calling `freeze` after the last member. Until then the enum
+is open and can still gain members: any member assigned to a new constant joins it, e.g.
+`Color.const_set(:Black, Color.send(:new))`. A member not assigned to a constant is not added.
 
 ```ruby
-Color::Red.inspect   #=> #<Color::Red value="red", hex="ff0000">
-Color::Blue.inspect  #=> #<Color::Blue value="blue">
+Color.send(:new) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
 ```
 
-To choose what to show, override the private `instance_variables_to_inspect`:
-
-```ruby
-class ApiKey < Shy::Enum::Base
-  Public = new(token: "abc")
-
-  private
-
-  def instance_variables_to_inspect = %i[@value]
-
-  freeze
-end
-
-ApiKey::Public.inspect #=> #<ApiKey::Public value="public">
-```
-
-### Comparing enum members
-
-The comparison is based on the enum member's ordinal position, which is assigned in declaration order.
-
-```ruby
-class Status < Shy::Enum::Base
-  Draft = new
-  Published = new
-  Archived = new
-
-  freeze
-end
-
-Status::Draft < Status::Published    #=> true
-Status::Published > Status::Draft    #=> true
-Status::Archived > Status::Published #=> true
-Status::Draft < Status::Archived     #=> true
-
-Status::Draft <=> Status::Published     #=> -1
-Status::Published <=> Status::Published #=> 0
-Status::Archived <=> Status::Published  #=> 1
-Status::Draft == Status::Draft          #=> true
-Status::Draft == Status::Published      #=> false
-```
-
-Members are only comparable with members of the same enum: with any other object
-`<=>` returns `nil` and `==` returns `false`.
-
-```ruby
-Status::Draft <=> "draft" #=> nil
-Status::Draft == "draft"  #=> false
-```
-
-### Using in case statements
-
-Enum members can be used in case statements thanks to Ruby's `===` operator. Here's how it works:
-
-```ruby
-class Status < Shy::Enum::Base
-  Draft = new
-  Published = new
-  Archived = new
-  freeze
-end
-
-status = Status::Published
-
-# Ruby uses === internally for case statements
-# This is equivalent to Status::Draft === status
-case status
-when Status::Draft
-  puts "Still working on it"
-when Status::Published
-  puts "Live and ready"
-when Status::Archived
-  puts "No longer active"
-end
-# prints "Live and ready"
-
-# You can also use it directly
-Status::Published === status #=> true
-Status::Draft === status    #=> false
-```
-
-### Iterating members
-
-The enum class is `Enumerable` over its members, in declaration order. With the `Color`
-from the top of this page:
-
-```ruby
-Color.each { puts it.name }    # prints Pink, Red, Violet
-Color.map(&:value)             #=> ["pink", "red", "violet"]
-Color.size                     #=> 3
-```
-
-### Looking up members
-
-`[]` finds a member by member or by value and returns `nil` when nothing matches.
-`fetch` (aliased as `cast`) does the same, but raises `Shy::Enum::Error`.
-
-```ruby
-Color["red"]          #=> #<Color::Red value="red">
-Color[Color::Red]     #=> #<Color::Red value="red">
-Color["brown"]        #=> nil
-Color.fetch("red")    #=> #<Color::Red value="red">
-Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Error)
-```
-
-Values are compared strictly: with the `Status` from [Setting integer values](#setting-integer-values),
-`Status["1"]` doesn't find the member whose value is `1`. Lookup uses a Hash, so values are compared
-with `eql?`, not `==`: `Status[1.0]` doesn't find `1` either. To convert the input before the
-lookup, e.g. strings coming from request params, override the private `before_cast` class method.
-Define it before calling `freeze`:
-
-```ruby
-class Status < Shy::Enum::Base
-  Draft = new(0)
-  Published = new(1)
-
-  def self.before_cast(obj) = Integer(obj, exception: false)
-  private_class_method :before_cast
-
-  freeze
-end
-
-Status["1"] #=> Status::Published
-```
-
-`member?` tells whether `[]` would find something, so it accepts members and values and
-applies `before_cast` too.
-
-```ruby
-Color.member?(Color::Red) #=> true
-Color.member?("red")      #=> true
-Color.member?("brown")    #=> false
-```
-
-> [!NOTE]
-> Use `member?`, not `include?`. `include?` keeps its `Module` meaning (whether
-> a module is included) and raises `TypeError` when given anything but a module.
+Always end the enum with `freeze`: it keeps the set of members fixed. Once frozen, the class
+can't be changed any more, so define everything else, such as methods and `before_cast`,
+before it. Freezing also makes `all` and `values` cheaper: they return the same frozen Array
+on every call.
 
 ### Exceptions
 
@@ -331,14 +297,10 @@ when modifying a member and `TypeError` when `include?` gets anything but a modu
 Color.send(:new)
 #=> Shy::Enum::Error "Can't add new values to a closed Enum"
 
-# When trying to set a HasEnum attribute (see below) to an object that isn't a member
-flower.color = "red"
-#=> Shy::Enum::Error "Type error. Enum type must be a Color"
-
 # When trying to add a member with a duplicated value
-class Status < Shy::Enum::Base
-  Draft = new(0)
-  Deleted = new(0)
+class Answer < Shy::Enum::Base
+  Yes = new(1)
+  Ok = new(1)
   #=> Shy::Enum::Error "Duplicated member"
 end
 
@@ -351,43 +313,7 @@ Color::Red.value = "new_value"
 #=> FrozenError "can't modify frozen Color: #<Color::Red value=\"red\">"
 ```
 
-The Rails integrations raise their own errors too, see [ActiveModel](RAILS.md#activemodel) and
-[ActiveRecord](RAILS.md#activerecord).
-
-### Freezing
-
-Members are always frozen as soon as their constant is defined. The enum class is not:
-you freeze it yourself by calling `freeze` after the last member. Until then the enum
-is open and can still gain members: any member assigned to a new constant joins it, e.g.
-`Color.const_set(:Black, Color.send(:new))`. A member not assigned to a constant is not added.
-
-```ruby
-class Color < Shy::Enum::Base
-  Red = new
-
-  freeze # closes the enum
-end
-
-Color.send(:new) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
-```
-
-Always end the enum with `freeze`: it keeps the set of members fixed. Once frozen, the class
-can't be changed any more, so define everything you need, such as `before_cast`, before it.
-
-Freezing also makes `all` (and `registry`) and `values` cheaper: a frozen enum builds their
-Arrays once and returns the same frozen Arrays on every call, while an open enum builds new
-ones each time. Lookups (`[]`, `fetch`, `member?`), `each` and `size` allocate nothing either way.
-Objects allocated per call on an enum with 20 members:
-
-| Call      | Open | Frozen |
-|-----------|-----:|-------:|
-| `all`     |    1 |      0 |
-| `values`  |    1 |      0 |
-| `[]`      |    0 |      0 |
-| `each {}` |    0 |      0 |
-
-The Arrays returned by a frozen enum are frozen: `Color.all << x` raises `FrozenError`. Call
-`dup` on them if you need to change them.
+[HasEnum](#hasenum) and the Rails integrations raise their own errors too, see their sections.
 
 ## HasEnum
 
@@ -405,10 +331,10 @@ end
 
 flower = Flower.new
 flower.color #=> nil
-flower.pink!
-flower.color #=> #<Color::Pink value="pink">
-flower.pink? #=> true
-flower.violet? #=> false
+flower.green!
+flower.color #=> #<Color::Green value="green">
+flower.green? #=> true
+flower.red? #=> false
 flower.color = Color::Red
 flower.color #=> #<Color::Red value="red">
 ```
@@ -417,7 +343,7 @@ flower.color #=> #<Color::Red value="red">
 - a reader and a writer named after the enum, downcased and without its namespace
   (`color` and `color=` for `Color`, `state` for `Issue::State`)
 - a predicate `value?` and a setter `value!` for each member, named after its value
-  (`pink?` and `pink!`)
+  (`green?` and `green!`)
 
 The values must make valid method names: with Integer values the predicates and setters are
 named e.g. `0?` and `0!`, and can only be called with `send`. [`shy_enum`](RAILS.md#activerecord) names
@@ -448,10 +374,26 @@ flower.color = "red" #=> Shy::Enum::Error "Type error. Enum type must be a Color
 
 ## Rails
 
-Opt-in integrations for Rails ~> 8.1, documented in [RAILS.md](RAILS.md):
+Opt-in integrations for ActiveModel and ActiveRecord. With ActiveRecord, `shy_enum` stores
+the member's value in a column and reads the member back, with scopes and predicates modeled
+on Rails' `enum`:
 
-- [ActiveModel](RAILS.md#activemodel) - an `ActiveModel::Type` for enum attributes
-- [ActiveRecord](RAILS.md#activerecord) - the `shy_enum` macro, modeled on Rails' `enum`
+```ruby
+class Post < ApplicationRecord
+  include Shy::Enum::ActiveRecordEnum
+
+  shy_enum :priority, Priority # integer column
+end
+
+post = Post.create!(priority: Priority::High)
+post.priority #=> #<Priority::High value=2>
+post.high?    #=> true
+Post.low      # scope
+```
+
+ActiveModel gets an attribute type, `:shy_enum`, for form objects and other models without
+a table. The [Rails guide](RAILS.md) covers both: forms, validation, querying and how
+`shy_enum` differs from Rails' `enum`.
 
 ## Installation
 
@@ -465,7 +407,7 @@ Then require it:
 require "shy/enum"
 ```
 
-The Rails integrations are opt-in and need activemodel or activerecord ~> 8.1 in your bundle:
+The Rails integrations are opt-in and need activemodel or activerecord in your bundle:
 `require "shy/enum/active_model"` or `require "shy/enum/active_record"`. See [Rails](#rails).
 
 ## Development
@@ -473,16 +415,16 @@ The Rails integrations are opt-in and need activemodel or activerecord ~> 8.1 in
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake` to run all the
 suites and RuboCop. There are three test suites, each in its own process: `rake test` (core, no Rails
 loaded), `rake test:active_model` and `rake test:active_record`; `rake test:all` runs all three. The
-ActiveRecord suite uses an in-memory SQLite database. You can also run `bin/console` for an interactive prompt that will allow
-you to experiment.
+ActiveRecord suite uses an in-memory SQLite database. You can also run `bin/console` for an
+interactive prompt that will allow you to experiment.
 
 Add `COVERAGE=1` to print a line and branch coverage report. A single suite reports only the files
 it tests, from that run only; `COVERAGE=1 rake test:all` prints one report for all of `lib/`,
 merging the three suites.
 
-Run `bundle exec rake rdoc` to generate the API documentation from this README and the code comments
-into `docs/`, then open `docs/index.html`. Run `bundle exec rake rerdoc` to rebuild it from scratch:
-it deletes `docs/` first. The documentation is published to GitHub Pages by the `Deploy Docs` workflow.
+Run `bundle exec rake rdoc` to generate the documentation into `docs/`, then open
+`docs/index.html`. Run `bundle exec rake rerdoc` to rebuild it from scratch: it deletes `docs/`
+first. The documentation is published to GitHub Pages by the `Deploy Docs` workflow.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version
 number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git

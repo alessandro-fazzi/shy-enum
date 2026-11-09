@@ -83,6 +83,10 @@ module Shy
 
         # Closes the enum: no member can be added after it. It freezes the members
         # lookup too, and caches ::registry and ::values.
+        #
+        # Once frozen, ::all, ::registry and ::values return the same frozen Array
+        # on every call instead of building a new one: call `dup` on it to change
+        # it. Lookups, ::each and ::size allocate nothing, frozen or not.
         def freeze
           if index
             index.each_key(&:freeze).freeze
