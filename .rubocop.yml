@@ -24,7 +24,13 @@ Style/OneClassPerFile:
   Exclude:
     - "test/support/**/*"
 
+# The playground stops in IRB on purpose.
+Lint/Debugger:
+  Exclude:
+    - "examples/**/*"
+
 # The variables are only used inside IRB.
 Lint/UselessAssignment:
   Exclude:
     - "bin/console"
+    - "examples/**/*"
