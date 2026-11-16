@@ -6,22 +6,10 @@ module Shy
     #
     # Include the module, then declare each enum with ClassMethods#enum. The
     # instances get a reader and a writer for the current member, plus a
-    # predicate and a setter for every member.
-    #
-    # Do **not** use it in ActiveRecord models: its `enum` would override Rails'
-    # `enum`. Use ActiveRecordEnum instead.
-    #
-    # ## Example
+    # predicate and a setter for every member. The methods are documented in
+    # HasEnum::ClassMethods.
     #
     # ```ruby
-    # class Status < Shy::Enum::Base
-    #   Draft = new
-    #   Published = new
-    #   Archived = new
-    #
-    #   freeze
-    # end
-    #
     # class Post
     #   include Shy::Enum::HasEnum
     #
@@ -29,32 +17,15 @@ module Shy
     # end
     #
     # post = Post.new
-    # post.status                    #=> nil
     # post.status = Status::Draft
-    # post.draft?                    #=> true
-    # post.published?                #=> false
-    # post.published!
-    # post.status                    #=> #<Status::Published value="published">
-    #
-    # post.status = "draft"
-    # #=> Shy::Enum::Error: Type error. Enum type must be a Status
+    # post.draft? #=> true
     # ```
     #
-    # ## Custom accessor name
+    # Do **not** use it in ActiveRecord models: its `enum` would override Rails'
+    # `enum`. Use ActiveRecordEnum instead.
     #
-    # Pass `as:` to name the reader and the writer yourself:
-    #
-    # ```ruby
-    # class Post
-    #   include Shy::Enum::HasEnum
-    #
-    #   enum Status, as: :state
-    # end
-    #
-    # post = Post.new
-    # post.state = Status::Draft
-    # post.state #=> #<Status::Draft value="draft">
-    # ```
+    # See the [README](rdoc-ref:README.md@hasenum) for how to use it: custom accessor
+    # names, prefix and suffix, type checks.
     module HasEnum
       def self.included(base) # :nodoc:
         base.extend(ClassMethods)
@@ -63,15 +34,19 @@ module Shy
       # Class methods added by including HasEnum.
       module ClassMethods
         # :call-seq:
-        #   enum(klass)
-        #   enum(klass, as: name)
+        #   enum(klass, as: name, prefix: true_or_name, suffix: true_or_name)
         #
         # Declares an attribute holding a member of `klass` and defines its methods.
+        # The keywords are all optional and can be combined.
         #
         # * `klass` - The enum, a subclass of Base
         # * `as:` - The name of the reader and the writer, as a Symbol or a String.
         #   Defaults to the enum class name, downcased and without its namespace
         #   (`color` for `Color`, `state` for `Issue::State`)
+        # * `prefix:` - Prepended to the names of predicates and setters (`status_draft?`).
+        #   `true` uses the accessor name, a String or a Symbol is used as is. Defaults to `nil`
+        # * `suffix:` - Appended to the names of predicates and setters (`draft_status?`),
+        #   same values as `prefix:`. Defaults to `nil`
         #
         # Defines these instance methods, e.g. for `enum Status`:
         #
@@ -81,13 +56,14 @@ module Shy
         # * a predicate per member (`draft?`) - Whether it is the current member
         # * a setter per member (`draft!`) - Makes it the current member
         #
-        # Predicates and setters are named after the members' values, whatever `as:` is.
-        def enum(klass, as: demodulize(klass))
+        # Predicates and setters are named after the members' values, whatever `as:` is,
+        # plus the optional `prefix:` and `suffix:`.
+        def enum(klass, as: demodulize(klass), prefix: nil, suffix: nil)
           name = as.to_s
           ivar_name = :"@#{name}_enum"
-          define_enum_getter(name, ivar_name)
-          define_enum_setter(klass, name, ivar_name)
-          define_enum_methods(klass, ivar_name)
+          define_enum_getter(name:, ivar_name:)
+          define_enum_setter(klass:, name:, ivar_name:)
+          define_enum_methods(klass:, name:, ivar_name:, prefix:, suffix:)
         end
 
         private
@@ -96,13 +72,13 @@ module Shy
           klass.name[(klass.name.rindex("::")&.+(2) || 0)..].downcase
         end
 
-        def define_enum_getter(name, ivar_name)
+        def define_enum_getter(name:, ivar_name:)
           define_method(name) do
             instance_variable_get(ivar_name)
           end
         end
 
-        def define_enum_setter(klass, name, ivar_name)
+        def define_enum_setter(klass:, name:, ivar_name:)
           define_method("#{name}=") do |type_to_set|
             raise(Error, "Type error. Enum type must be a #{klass}") unless type_to_set.is_a?(klass)
 
@@ -110,16 +86,24 @@ module Shy
           end
         end
 
-        def define_enum_methods(klass, ivar_name)
+        def define_enum_methods(klass:, name:, ivar_name:, prefix:, suffix:)
           klass.registry.each do |type|
-            define_method("#{type.value}!") do
+            method_name = enum_method_name(type:, name:, prefix:, suffix:)
+
+            define_method("#{method_name}!") do
               instance_variable_set(ivar_name, type)
             end
 
-            define_method("#{type.value}?") do
+            define_method("#{method_name}?") do
               instance_variable_get(ivar_name) == type
             end
           end
+        end
+
+        def enum_method_name(type:, name:, prefix:, suffix:)
+          head = "#{prefix == true ? name : prefix}_" if prefix
+          tail = "_#{suffix == true ? name : suffix}" if suffix
+          "#{head}#{type.value}#{tail}"
         end
       end
     end

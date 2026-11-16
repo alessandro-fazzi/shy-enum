@@ -347,7 +347,8 @@ flower.color #=> #<Color::Red value="red">
   (`green?` and `green!`)
 
 The values must make valid method names: with Integer values the predicates and setters are
-named e.g. `0?` and `0!`, and can only be called with `send`.
+named e.g. `0?` and `0!`, and can only be called with `send` unless you add a prefix
+(`priority_0?`, see below).
 
 To pick another name for the reader and the writer, pass `as:` (a Symbol or a String).
 Predicates and setters are not affected:
@@ -363,6 +364,26 @@ flower = Flower.new
 flower.petals = Color::Red
 flower.petals #=> #<Color::Red value="red">
 flower.red? #=> true
+```
+
+To tell apart enums that share values in the same class, or to avoid bare names like
+`published?`, pass `prefix:` and/or `suffix:` (`true` uses the accessor name, a String or a
+Symbol is used as is). They only affect predicates and setters, not the reader and the writer.
+With Integer values, a prefix also makes them callable without `send`:
+
+```ruby
+class Post
+  include Shy::Enum::HasEnum
+
+  enum Status, prefix: true
+  enum Priority, prefix: true # Integer values
+end
+
+post = Post.new
+post.status_draft!
+post.status_draft? #=> true
+post.status        #=> #<Status::Draft value="draft">
+post.priority_0? #=> false
 ```
 
 The writer only accepts members of that enum. Anything else, including a matching value,

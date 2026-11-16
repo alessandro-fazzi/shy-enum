@@ -23,7 +23,8 @@ module Shy
     # `ApplicationRecord`. Nothing is hooked in automatically.
     #
     # It adds the ClassMethods#shy_enum macro, modeled on Rails' `enum`: the
-    # attribute is stored as the member `value` and read back as the member.
+    # attribute is stored as the member `value` and read back as the member. The
+    # macro is documented in ActiveRecordEnum::ClassMethods.
     #
     # ```ruby
     # class Post < ApplicationRecord
