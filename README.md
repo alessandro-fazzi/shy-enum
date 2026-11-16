@@ -1,8 +1,12 @@
 # Shy::Enum
 
-Shy::Enum is a small, dependency-free way to define enums in plain Ruby. Each member is a
-frozen object with a name, a value and an ordinal position, so members are comparable, can be
-looked up by value and carry extra attributes. A closed enum can't gain new members, and
+Shy::Enum is a small, dependency-free way to define enums in plain Ruby following the
+_type safe enum_ pattern. Each member is a frozen object with a name, a value and an
+ordinal position, so members are comparable, can be looked up by value and carry
+extra attributes.
+
+A closed (frozen) enum can't gain new members and benefit from various performance boosts.
+
 [`HasEnum`](#hasenum) plugs an enum into any class with a reader, a writer and predicate methods.
 Optional integrations for [ActiveModel](RAILS.md#activemodel) and
 [ActiveRecord](RAILS.md#activerecord) are opt-in.
@@ -23,8 +27,8 @@ Color::Green.ordinal #=> 2
 Color::Green.to_s    #=> "green"
 ```
 
-Each member is a constant of the enum class. The ordinal is its position, starting from 1.
-`freeze` closes the enum: always end it this way, see [Freezing](#freezing).
+Each member is a constant of the enum class. The ordinal is its position, 1-indexed.
+`freeze` closes the enum (see [Freezing](#freezing)).
 
 See [Installation](#installation) to add it to a project.
 
@@ -94,7 +98,7 @@ end
 
 ### After initialize
 
-Override `after_initialize` to refine a member right after it is built, e.g. to derive
+Use the `after_initialize` hook to refine a member right after it is built, e.g. to derive
 extra state from its attributes. There's no need to call `super` or to override `initialize`.
 
 ```ruby
@@ -114,7 +118,7 @@ end
 Size::Large.label #=> "1920x1080"
 ```
 
-The [extra attributes](#extra-attributes) are already set and so are the positional
+The [extra attributes](#extra-attributes) are already set and so are the custom
 value, when given, and the ordinal. The `name` is not: it's assigned when the constant is
 defined, and so is the default value. The member is also still unfrozen, so it can be
 modified here.
@@ -204,8 +208,7 @@ Color.cast("brown")   # raises: Unknown member for value "brown" (Shy::Enum::Err
 ```
 
 Use `fetch` where data from outside enters your code, e.g. a JSON payload, and pass the member
-around from there: invalid input fails right away instead of travelling as a String. An attribute
-that casts, such as [`shy_enum`](RAILS.md#assigning-values), does the lookup for you.
+around from there: invalid input fails right away instead of travelling as a String.
 
 Values are compared strictly: `Priority["1"]` and `Priority[1.0]` don't find the member whose
 value is `1`. To convert the input before the lookup, override the private `before_cast` class
@@ -273,9 +276,7 @@ IssueState.working.map(&:value) #=> ["in_progress", "review"]
 ### Freezing
 
 Members are always frozen as soon as their constant is defined. The enum class is not:
-you freeze it yourself by calling `freeze` after the last member. Until then the enum
-is open and can still gain members: any member assigned to a new constant joins it, e.g.
-`Color.const_set(:Black, Color.send(:new))`. A member not assigned to a constant is not added.
+you freeze it yourself by calling `freeze` after the last member.
 
 ```ruby
 Color.send(:new) # raises: Can't add new values to a closed Enum (Shy::Enum::Error)
@@ -346,8 +347,7 @@ flower.color #=> #<Color::Red value="red">
   (`green?` and `green!`)
 
 The values must make valid method names: with Integer values the predicates and setters are
-named e.g. `0?` and `0!`, and can only be called with `send`. [`shy_enum`](RAILS.md#activerecord) names
-them after the member name instead.
+named e.g. `0?` and `0!`, and can only be called with `send`.
 
 To pick another name for the reader and the writer, pass `as:` (a Symbol or a String).
 Predicates and setters are not affected:
@@ -426,9 +426,15 @@ Run `bundle exec rake rdoc` to generate the documentation into `docs/`, then ope
 `docs/index.html`. Run `bundle exec rake rerdoc` to rebuild it from scratch: it deletes `docs/`
 first. The documentation is published to GitHub Pages by the `Deploy Docs` workflow.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version
-number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git
-commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To install this gem onto your local machine, run `bundle exec rake install`.
+
+To release a new version, from a clean `main` run `bundle exec rake tag_and_release`. It fetches the tags from `origin`
+and compares them with the version in `version.rb`. If that version is already the latest tag, it asks whether to bump
+the major, minor or patch number (and whether to make it a pre-release, e.g. `1.0.0.pre1`), then updates `version.rb`
+and `Gemfile.lock` and commits the bump. From a pre-release it also offers the next pre-release or the stable version
+it leads to. After a final
+confirmation it creates the annotated `vX.Y.Z` tag and pushes `main` and the tag to `origin`. Declining the
+confirmation leaves the bump commit local; run the task again to resume.
 
 ## Contributing
 
