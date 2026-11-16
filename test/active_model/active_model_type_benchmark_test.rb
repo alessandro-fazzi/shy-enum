@@ -7,6 +7,10 @@ module Shy
   # Looking up a member must not depend on how many members the enum has.
   class ActiveModelTypeBenchmark < Minitest::Benchmark
     LOOKUPS = 1_000
+    NULL_IO = File.open(File::NULL, "w")
+
+    # Minitest::Benchmark prints the timing table to the reporter's IO: discard it.
+    def self.io = NULL_IO
 
     def self.bench_range
       bench_linear(500, 4_000, 500)
