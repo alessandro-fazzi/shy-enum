@@ -111,7 +111,7 @@ module Shy
         assert_equal Status::InProgress, post.status
         assert_equal Priority::High, post.priority
         assert_equal "inprogress", raw_value("SELECT status FROM posts")
-        assert_equal 1, raw_value("SELECT priority FROM posts")
+        assert_equal 2, raw_value("SELECT priority FROM posts")
       end
 
       def test_default
@@ -233,7 +233,7 @@ module Shy
 
       # Like Rails' enum, the keys don't have the prefix
       def test_class_reader_ignores_prefix
-        assert_equal %w[low high], Post.priorities.keys
+        assert_equal %w[low medium high], Post.priorities.keys
       end
 
       def test_prefix_suffix

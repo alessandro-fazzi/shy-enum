@@ -27,7 +27,7 @@ module Shy
     end
 
     def test_assignment_casts_values
-      ticket = Ticket.new(status: "published", priority: 1)
+      ticket = Ticket.new(status: "published", priority: 2)
 
       assert_equal Status::Published, ticket.status
       assert_equal Priority::High, ticket.priority

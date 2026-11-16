@@ -14,7 +14,8 @@ end
 # Stored as an integer.
 class Priority < Shy::Enum::Base
   Low = new(0)
-  High = new(1)
+  Medium = new(1)
+  High = new(2)
 
   freeze
 end
