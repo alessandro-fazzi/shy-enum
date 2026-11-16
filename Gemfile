@@ -11,6 +11,7 @@ gem "activemodel", Shy::Enum::RAILS_REQUIREMENT
 gem "activerecord", Shy::Enum::RAILS_REQUIREMENT
 gem "irb", "~> 1.18"
 gem "minitest", "~> 6.0"
+gem "minitest-reporters", "~> 1.8"
 gem "rake", "~> 13.0"
 gem "rdoc"
 gem "rubocop", "~> 1.91"

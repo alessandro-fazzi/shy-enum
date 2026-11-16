@@ -14,15 +14,16 @@ namespace :test do
   # ActiveRecord is not loaded.
   desc "Run all test suites; with COVERAGE=1 print one coverage report for all of lib/"
   task :all do
-    suites = %w[test test:active_model test:active_record]
+    suites = { "test" => "Core", "test:active_model" => "ActiveModel", "test:active_record" => "ActiveRecord" }
     coverage = ENV.key?("COVERAGE")
     if coverage
       rm_rf "coverage"
       ENV["COVERAGE_MERGE"] = "1"
     end
 
-    suites.each_with_index do |suite, i|
+    suites.each_with_index do |(suite, title), i|
       ENV["COVERAGE_SILENT"] = "1" if coverage && i < suites.size - 1
+      puts "\n== #{title} suite =="
       Rake::Task[suite].invoke
     ensure
       ENV.delete("COVERAGE_SILENT")

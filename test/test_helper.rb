@@ -26,3 +26,6 @@ $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "shy/enum"
 
 require "minitest/autorun"
+require "minitest/reporters"
+
+Minitest::Reporters.use! Minitest::Reporters::DefaultReporter.new(color: $stdout.tty? && !ENV.key?("NO_COLOR"))
