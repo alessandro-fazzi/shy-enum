@@ -45,12 +45,22 @@ module Shy
     # See the [Rails guide](rdoc-ref:RAILS.md@activerecord) for how to use it: generated
     # methods, forms, validation and how it differs from Rails' `enum`.
     module ActiveRecordEnum
+      #: (Module base) -> void
       def self.included(base) # :nodoc:
         base.extend(ClassMethods)
       end
 
       # Class methods added to the including model
+      #--
+      # @rbs module-self: Class
+      # @rbs module-self: ActiveRecord::Base::ClassMethods[untyped, ActiveRecord::Relation, untyped]
+      # @rbs module-self: ActiveRecord::AttributeMethods::ClassMethods
+      # @rbs module-self: ActiveModel::AttributeRegistration::ClassMethods
+      # @rbs module-self: ActiveModel::Validations::HelperMethods
+      #++
       module ClassMethods
+        # @rbs @shy_enum_methods_module: Module
+
         # Declares an enum attribute, stored as the member `value` and read back
         # as the member. Assignment and `where` take members and values, looked
         # up with `enum_class[]`; labels and Symbols are not looked up.
@@ -95,13 +105,16 @@ module Shy
         # Rails' `enum`.
         #
         # Raises `ArgumentError` on any other option, like Rails' `enum`.
-        def shy_enum(name, enum_class, default: (no_default_provided = true), prefix: nil, suffix: nil, # rubocop:disable Metrics/ParameterLists
+        #
+        #: (String | Symbol name, singleton(Base) enum_class, ?default: Base?, ?prefix: affix, ?suffix: affix, ?scopes: bool, ?instance_methods: bool, ?validate: bool | Hash[Symbol, untyped]) -> void
+        def shy_enum(name, enum_class, default: (no_default_provided = true; nil), prefix: nil, suffix: nil, # rubocop:disable Style/Semicolon,Metrics/ParameterLists
                      scopes: true, instance_methods: true, validate: false)
           name = name.to_sym
           labels = enum_class.all.to_h { [it, shy_enum_method_name(it, name, prefix, suffix)] }
           shy_enum_check_conflicts(name, labels, scopes, instance_methods)
 
           # `attribute` tells "no default" from `default: nil`, so forward it only if given
+          # @type var attribute_options: Hash[Symbol, untyped]
           attribute_options = no_default_provided ? {} : { default: default }
           attribute name, :shy_enum, enum_class: enum_class, strict: !validate, **attribute_options
           shy_enum_define_reader(name, enum_class)
@@ -113,24 +126,28 @@ module Shy
 
         private
 
+        #: (Symbol name, singleton(Base) enum_class, bool | Hash[Symbol, untyped] validate) -> void
         def shy_enum_define_validation(name, enum_class, validate)
+          # @type var options: Hash[Symbol, untyped]
           options = validate.is_a?(Hash) ? validate : {}
           validates_inclusion_of name, in: enum_class.all, allow_nil: true, **options
         end
 
+        #: (Base member, Symbol name, affix prefix, affix suffix) -> Symbol
         def shy_enum_method_name(member, name, prefix, suffix)
           prefix = "#{prefix == true ? name : prefix}_" if prefix
           suffix = "_#{suffix == true ? name : suffix}" if suffix
-          "#{prefix}#{member.name.underscore}#{suffix}"
+          :"#{prefix}#{member.name.underscore}#{suffix}"
         end
 
+        #: (Symbol name, labels labels, bool scopes, bool instance_methods) -> void
         def shy_enum_check_conflicts(name, labels, scopes, instance_methods)
           shy_enum_check_duplicate_labels(labels)
-          instance = []
-          klass = [name.to_s.pluralize]
+          instance = [] #: Array[Symbol]
+          klass = [name.to_s.pluralize.to_sym] #: Array[Symbol]
           labels.each_value do |label|
-            instance.push("#{label}?", "#{label}!") if instance_methods
-            klass.push(label, "not_#{label}") if scopes
+            instance.push(:"#{label}?", :"#{label}!") if instance_methods
+            klass.push(label, :"not_#{label}") if scopes
           end
 
           instance.each { shy_enum_conflict!(it, "an instance method") if shy_enum_instance_method_conflict?(it) }
@@ -140,6 +157,8 @@ module Shy
         # Two members whose names underscore to the same label (e.g. `HTTP` and
         # `Http`) would overwrite each other's methods, scopes and key in the
         # class reader Hash.
+        #
+        #: (labels labels) -> void
         def shy_enum_check_duplicate_labels(labels)
           labels.group_by { |_member, label| label }.each do |label, pairs|
             next if pairs.one?
@@ -151,6 +170,8 @@ module Shy
 
         # Like Rails' `enum`: a method inherited from Object (e.g. Kernel#open) is
         # not a conflict, unless the model redefines it or Rails restricts it.
+        #
+        #: (Symbol method) -> bool
         def shy_enum_class_method_conflict?(method)
           return true if dangerous_class_method?(method)
           return false unless respond_to?(method, true)
@@ -159,10 +180,12 @@ module Shy
           method(method).owner != Object.method(method).owner
         end
 
+        #: (Symbol method) -> bool
         def shy_enum_instance_method_conflict?(method)
           method_defined?(method) || private_method_defined?(method)
         end
 
+        #: (Symbol method, String kind) -> bot
         def shy_enum_conflict!(method, kind)
           raise Shy::Enum::Error, "Can't define `#{method}`: #{kind} with that name already exists in #{self}"
         end
@@ -170,8 +193,11 @@ module Shy
         # The reader raises on a value read from the database that is not a
         # member. An unknown value assigned with `validate:` is returned as is,
         # so validations can handle it.
+        #
+        #: (Symbol name, singleton(Base) enum_class) -> void
         def shy_enum_define_reader(name, enum_class)
           shy_enum_methods_module.define_method(name) do
+            # @type self: ActiveRecord::Base
             value = read_attribute(name)
             return value if value.nil? || value.is_a?(enum_class) || attribute_changed?(name)
 
@@ -180,15 +206,24 @@ module Shy
         end
 
         # Like Rails' `enum`, keyed by label without prefix or suffix
+        #
+        #: (Symbol name, singleton(Base) enum_class) -> void
         def shy_enum_define_class_reader(name, enum_class)
           members = enum_class.all.to_h { [it.name.underscore, it] }.with_indifferent_access.freeze
           singleton_class.define_method(name.to_s.pluralize) { members }
         end
 
+        #: (Symbol name, labels labels) -> void
         def shy_enum_define_instance_methods(name, labels)
           labels.each do |member, label|
-            shy_enum_methods_module.define_method(:"#{label}?") { public_send(name) == member }
-            shy_enum_methods_module.define_method(:"#{label}!") { update!(name => member) }
+            shy_enum_methods_module.define_method(:"#{label}?") do
+              # @type self: ActiveRecord::Base
+              public_send(name) == member
+            end
+            shy_enum_methods_module.define_method(:"#{label}!") do
+              # @type self: ActiveRecord::Base
+              update!(name => member)
+            end
           end
         end
 
@@ -196,6 +231,8 @@ module Shy
         # like Rails' `enum` does, so the model can override them and call `super`.
         # One module per model: a subclass calling `shy_enum` gets its own. Its
         # temporary name shows up in `ancestors`, e.g. `Post::ShyEnumMethods(anonymous)`.
+        #
+        #: () -> Module
         def shy_enum_methods_module
           @shy_enum_methods_module ||= Module.new.tap do |mod|
             mod.set_temporary_name("#{self}::ShyEnumMethods(anonymous)")
@@ -203,6 +240,7 @@ module Shy
           end
         end
 
+        #: (Symbol name, labels labels) -> void
         def shy_enum_define_scopes(name, labels)
           labels.each do |member, label|
             scope label, -> { where(name => member) }

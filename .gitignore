@@ -10,3 +10,6 @@
 # RDoc documentation
 /docs
 .vscode/settings.json
+
+# rbs collection (rbs_collection.lock.yaml is versioned)
+/.gem_rbs_collection/

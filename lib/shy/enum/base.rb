@@ -72,13 +72,33 @@ module Shy
     #
     # The README has a full guide with examples.
     class Base
-      class << self
-        include Enumerable
+      # The class methods of the enums, extended by Base
+      #--
+      # @rbs module-self: Class
+      #++
+      module ClassMethods
+        # @rbs @registry: Array[Base]?
+        # @rbs @values: Array[untyped]?
+
+        include Enumerable #[Base]
+
+        # Yields each enum member in declaration order
+        #
+        # Returns an Enumerator if no block is given
+        #: () { (Base) -> void } -> self
+        #: () -> Enumerator[Base, self]
+        def each(&)
+          return enum_for(:each) { size } unless block_given?
+
+          index.each_value(&)
+          self
+        end
 
         # All enum members, in declaration order. Same as ::all
         #
         # Once the enum is frozen, it returns the same frozen Array on every
         # call; before, a new Array each time.
+        #: () -> Array[Base]
         def registry = @registry || index.values
 
         # Closes the enum: no member can be added after it. It freezes the members
@@ -87,26 +107,20 @@ module Shy
         # Once frozen, ::all, ::registry and ::values return the same frozen Array
         # on every call instead of building a new one: call `dup` on it to change
         # it. Lookups, ::each and ::size allocate nothing, frozen or not.
+        #: () -> self
         def freeze
           if index
             index.each_key(&:freeze).freeze
             @registry = index.values.freeze
             @values = index.keys.freeze
           end
-          super
-        end
-
-        # Yields each enum member in declaration order
-        #
-        # Returns an Enumerator if no block is given
-        def each(&)
-          return enum_for(__method__) { size } unless block_given?
-
-          index.each_value(&)
-          self
+          # Steep can't resolve `super` from a mixin method through module-self:
+          # at runtime it is Module#freeze.
+          super # steep:ignore UnexpectedSuper
         end
 
         # Returns the number of members
+        #: () -> Integer
         def size = index.size
 
         # Checks whether `mod` is included in the enum, like `Module#include?`
@@ -115,6 +129,7 @@ module Shy
         #
         # Enumerable would make it look for members instead: use ::member? for that.
         # Raises TypeError if `mod` is not a Module.
+        #: (untyped mod) -> bool
         def include?(mod)
           unless mod.is_a?(Module)
             raise TypeError, "wrong argument type #{mod.class} (expected Module). " \
@@ -129,15 +144,18 @@ module Shy
         # * `obj` - An enum member, or the value of an enum member
         #
         # Looks up like ::[], `before_cast` included.
+        #: (untyped obj) -> bool
         def member?(obj) = !self[obj].nil?
 
         # Returns all enum members, in declaration order
+        #: () -> Array[Base]
         def all = registry
 
         # Returns the values of all enum members, in declaration order
         #
         # Once the enum is frozen, it returns the same frozen Array on every
         # call; before, a new Array each time.
+        #: () -> Array[untyped]
         def values = @values || index.keys
 
         # Finds an enum member by member or value
@@ -155,6 +173,7 @@ module Shy
         # Color["red"]   #=> #<Color::Red value="red">
         # Color["brown"] #=> nil
         # ```
+        #: (untyped obj) -> Base?
         def [](obj)
           if obj.is_a?(self)
             member = index[obj.value]
@@ -171,6 +190,7 @@ module Shy
         # * `obj` - An enum member, or the value of an enum member
         #
         # Raises Error if the enum member is not found
+        #: (untyped obj) -> Base
         def fetch(obj) = self[obj] || raise(Error, "Unknown member for value #{obj.inspect}")
         alias cast fetch
 
@@ -180,11 +200,13 @@ module Shy
         # The cached registry is not copied: it is built when the subclass freezes.
         #
         # * `subclass` - The class that is inheriting from this class
+        #: (Class subclass) -> void
         def inherited(subclass) # :nodoc:
           super
           subclass.instance_variable_set(:@index, (index && index.dup) || {})
         end
 
+        #: (Symbol name) -> void
         def const_added(name) # :nodoc:
           object = const_get(name, false)
 
@@ -201,12 +223,13 @@ module Shy
 
         private
 
+        #: (Base member) -> Base
         def register(member) = index[member.value] = member
 
         # The members by value, in declaration order (a Hash keeps the insertion
         # order). The single source of the members: ::[] is a Hash lookup, and
         # ::registry and ::each read from it.
-        attr_reader :index
+        attr_reader :index #: Hash[untyped, Base]
 
         # :doc:
         # Converts the object looked up by `[]`, `fetch` and `member?` before
@@ -219,17 +242,19 @@ module Shy
         # def self.before_cast(obj) = Integer(obj, exception: false)
         # private_class_method :before_cast
         # ```
+        #: (untyped obj) -> untyped
         def before_cast(obj) = obj
       end
+      extend ClassMethods
 
       # The position of the enum member in declaration order, starting from 1
-      attr_reader :ordinal
+      attr_reader :ordinal #: Integer
       # The value of the enum member: the first argument of `new`, or the
       # downcased constant name. Members are frozen, so it can't be changed.
-      attr_accessor :value
+      attr_accessor :value #: untyped
       # The name of the constant holding the enum member, e.g. `"Red"`.
       # Members are frozen, so it can't be changed.
-      attr_accessor :name
+      attr_accessor :name #: String
 
       # Builds a member. `new` is private: call it only inside the enum body,
       # assigning the result to a constant.
@@ -239,6 +264,7 @@ module Shy
       #
       # Raises Error if the enum is frozen, or if an attribute is named like an
       # existing method (e.g. `name`).
+      #: (?untyped value, **untyped attributes) -> void
       def initialize(value = nil, **attributes)
         raise(Error, "Can't add new values to a closed Enum") if self.class.frozen?
 
@@ -256,11 +282,13 @@ module Shy
       # the constant is defined. The member is not frozen yet.
       #
       # Define it before the members: the ones declared above it won't call it.
+      #: () -> void
       def after_initialize; end
 
       private_class_method :new
 
       # Returns the value as a String, e.g. `"1"` for a value of `1`
+      #: () -> String
       def to_s = value.to_s
 
       # Returns a string representation of the enum member, with its value and
@@ -268,6 +296,7 @@ module Shy
       #
       # Override the private `instance_variables_to_inspect` to choose the
       # instance variables to show.
+      #: () -> String
       def inspect
         fields = instance_variables_to_inspect.map do |ivar|
           "#{ivar.to_s.delete_prefix("@")}=#{instance_variable_get(ivar).inspect}"
@@ -283,6 +312,7 @@ module Shy
       # Status::Draft < Status::Published #=> true
       # Status::Draft <=> "draft"         #=> nil
       # ```
+      #: (untyped other) -> Integer?
       def <=>(other) = other.is_a?(self.class) ? ordinal <=> other.ordinal : nil
       include Comparable
 
@@ -290,8 +320,10 @@ module Shy
 
       # The instance variables shown by #inspect: all but `@name` and `@ordinal`.
       # Override it to choose what to show.
+      #: () -> Array[Symbol]
       def instance_variables_to_inspect = instance_variables - %i[@name @ordinal]
 
+      #: (Symbol key, untyped attribute) -> void
       def define_attribute(key, attribute)
         if Base.method_defined?(key) || Base.private_method_defined?(key, false)
           raise(Error, "`#{key}` is a reserved method and can't be overridden by an attribute reader")

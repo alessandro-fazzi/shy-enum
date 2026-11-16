@@ -37,8 +37,10 @@ module Shy
     # See the [Rails guide](rdoc-ref:RAILS.md@activemodel) for how to use it: validation,
     # strict mode and form objects.
     class ActiveModelType < ::ActiveModel::Type::Value
+      # @rbs @strict: bool
+
       # The enum class this type casts to
-      attr_reader :enum_class
+      attr_reader :enum_class #: singleton(Base)
 
       # * `enum_class` - A subclass of Shy::Enum::Base
       # * `strict` - Raise `ArgumentError` on assignment of an unknown value.
@@ -46,6 +48,7 @@ module Shy
       #
       # Raises `ArgumentError` if `enum_class` is not a subclass of Shy::Enum::Base,
       # or on any other option: the type has no precision, limit or scale.
+      #: (enum_class: singleton(Base), ?strict: bool) -> void
       def initialize(enum_class:, strict: false)
         unless enum_class.is_a?(Class) && enum_class < Shy::Enum::Base
           raise ArgumentError, "enum_class must be a subclass of Shy::Enum::Base, got #{enum_class.inspect}"
@@ -57,9 +60,13 @@ module Shy
       end
 
       # Returns `:shy_enum`
+      #
+      #: () -> Symbol
       def type = :shy_enum
 
       # Whether an unknown value raises `ArgumentError` on assignment
+      #
+      #: () -> bool
       def strict? = @strict
 
       # Returns the member for `value`, `nil` for a blank value, or `value`
@@ -68,6 +75,8 @@ module Shy
       # The lookup goes through Base.[], so it's by value and the enum's
       # `before_cast` applies; labels and Symbols are not looked up. An unknown
       # value is kept so that validations can handle it: the type adds none.
+      #
+      #: [T < Object] (T value) -> (Base | T)?
       def cast_value(value) = enum_class[value] || value.presence
 
       # Returns the `value` of the member that `value` is or looks up to, or
@@ -88,6 +97,8 @@ module Shy
       #
       # Raises Error if `value` is a member of another enum: the database
       # adapter would fail with an unclear `TypeError` otherwise.
+      #
+      #: (untyped value) -> untyped
       def serialize(value)
         return value.value if value.is_a?(enum_class)
 
@@ -104,6 +115,9 @@ module Shy
       #
       # It doesn't raise: Rails deserializes for `inspect`, `attributes` and
       # dirty tracking too, so one unknown value would break them all.
+      #
+      #: (nil value) -> nil
+      #: (untyped value) -> untyped
       def deserialize(value)
         return if value.nil?
 
@@ -113,17 +127,21 @@ module Shy
       # With `strict`, raises `ArgumentError` if `value` is not blank and matches no member
       #
       # Returns `nil` when `value` is valid, like `ActiveModel::Type::Value`.
+      #
+      #: (untyped value) -> nil
       def assert_valid_value(value)
         return if !strict? || valid_value?(value)
 
         raise ArgumentError, "'#{value}' is not a valid #{enum_class}"
       end
 
+      #: (untyped other) -> bool
       def ==(other) # :nodoc:
         super && enum_class == other.enum_class && strict? == other.strict?
       end
       alias eql? ==
 
+      #: () -> Integer
       def hash # :nodoc:
         [super, enum_class, strict?].hash
       end
@@ -132,6 +150,8 @@ module Shy
 
       # Blank values are valid, like in Rails' `enum`; any other must be a member
       # or the value of a member, after `before_cast`.
+      #
+      #: (Object? value) -> bool
       def valid_value?(value) = value.blank? || !enum_class[value].nil?
     end
   end

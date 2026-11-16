@@ -34,3 +34,12 @@ Lint/UselessAssignment:
   Exclude:
     - "bin/console"
     - "examples/**/*"
+
+# RBS inline annotations (`#: () -> String`, `include Foo #[Bar]`) have no space after `#`.
+Layout/LeadingCommentSpace:
+  Enabled: false
+
+# An RBS inline signature (`#: (…) -> …`) can't wrap: each `#:` line is an overload.
+Layout/LineLength:
+  AllowedPatterns:
+    - '\A\s*#: '

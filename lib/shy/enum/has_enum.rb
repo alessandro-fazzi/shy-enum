@@ -27,15 +27,16 @@ module Shy
     # See the [README](rdoc-ref:README.md@hasenum) for how to use it: custom accessor
     # names, prefix and suffix, type checks.
     module HasEnum
+      #: (Module base) -> void
       def self.included(base) # :nodoc:
         base.extend(ClassMethods)
       end
 
       # Class methods added by including HasEnum.
+      #--
+      # @rbs module-self: Class
+      #++
       module ClassMethods
-        # :call-seq:
-        #   enum(klass, as: name, prefix: true_or_name, suffix: true_or_name)
-        #
         # Declares an attribute holding a member of `klass` and defines its methods.
         # The keywords are all optional and can be combined.
         #
@@ -58,6 +59,8 @@ module Shy
         #
         # Predicates and setters are named after the members' values, whatever `as:` is,
         # plus the optional `prefix:` and `suffix:`.
+        #
+        #: (singleton(Base) klass, ?as: String | Symbol, ?prefix: affix, ?suffix: affix) -> void
         def enum(klass, as: demodulize(klass), prefix: nil, suffix: nil)
           name = as.to_s
           ivar_name = :"@#{name}_enum"
@@ -68,38 +71,56 @@ module Shy
 
         private
 
+        #: (singleton(Base) klass) -> String
         def demodulize(klass)
-          klass.name[(klass.name.rindex("::")&.+(2) || 0)..].downcase
+          klass.name.sub(/\A.*::/, "").downcase
         end
 
+        #: (name: String, ivar_name: Symbol) -> void
         def define_enum_getter(name:, ivar_name:)
           define_method(name) do
+            # @type self: Object
             instance_variable_get(ivar_name)
           end
         end
 
+        #: (klass: singleton(Base), name: String, ivar_name: Symbol) -> void
         def define_enum_setter(klass:, name:, ivar_name:)
           define_method("#{name}=") do |type_to_set|
+            # @type self: Object
             raise(Error, "Type error. Enum type must be a #{klass}") unless type_to_set.is_a?(klass)
 
             instance_variable_set(ivar_name, type_to_set)
           end
         end
 
+        # @rbs klass: singleton(Base)
+        # @rbs name: String
+        # @rbs ivar_name: Symbol
+        # @rbs prefix: affix
+        # @rbs suffix: affix
+        # @rbs return: void
         def define_enum_methods(klass:, name:, ivar_name:, prefix:, suffix:)
           klass.registry.each do |type|
             method_name = enum_method_name(type:, name:, prefix:, suffix:)
 
             define_method("#{method_name}!") do
+              # @type self: Object
               instance_variable_set(ivar_name, type)
             end
 
             define_method("#{method_name}?") do
+              # @type self: Object
               instance_variable_get(ivar_name) == type
             end
           end
         end
 
+        # @rbs type: Shy::Enum::Base
+        # @rbs name: String
+        # @rbs prefix: affix
+        # @rbs suffix: affix
+        # @rbs return: String
         def enum_method_name(type:, name:, prefix:, suffix:)
           head = "#{prefix == true ? name : prefix}_" if prefix
           tail = "_#{suffix == true ? name : suffix}" if suffix

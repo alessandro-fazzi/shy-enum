@@ -1,6 +1,10 @@
 module Shy
   module Enum
-    VERSION: String
     # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+    # `prefix:` and `suffix:` of the generated method names: `true` uses the
+    # attribute name, a String or a Symbol is used as is, `nil` or `false` adds
+    # nothing.
+    type affix = String | Symbol | bool | nil
   end
 end

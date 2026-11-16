@@ -20,3 +20,4 @@ gem "rubocop-rake", "~> 0.7.1"
 gem "simplecov", "~> 1.3", require: false
 gem "simplecov-console", "~> 0.9.1", require: false
 gem "sqlite3", "~> 2.10"
+gem "steep", "~> 2.1", require: false

@@ -3,6 +3,7 @@
 require "bundler/gem_tasks"
 require "minitest/test_task"
 require "rdoc/task"
+require "steep/rake_task"
 
 Minitest::TestTask.create(:test) { |t| t.test_globs = ["test/shy/**/*_test.rb"] }
 
@@ -45,4 +46,22 @@ RDoc::Task.new do |rdoc|
   rdoc.options << "--markup" << "markdown"
 end
 
-task default: %i[test:all rubocop]
+# --no-daemon: otherwise `steep check` reuses a running `steep langserver` (e.g.
+# the editor's), with the Steepfile it loaded at startup.
+Steep::RakeTask.new do |t|
+  t.check.severity_level = :error
+  t.check << "--no-daemon"
+end
+
+namespace :rbs do
+  # .gem_rbs_collection/ is not versioned: a fresh clone (or CI) needs it before
+  # Steep. Quick when already installed; --frozen fails if the lockfile is stale.
+  desc "Install the RBS collection from rbs_collection.lock.yaml"
+  task :collection do
+    sh "rbs", "collection", "install", "--frozen"
+  end
+end
+
+Rake::Task["steep:check"].enhance(["rbs:collection"])
+
+task default: %i[test:all rubocop steep]

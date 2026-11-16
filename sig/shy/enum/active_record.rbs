@@ -1,0 +1,9 @@
+module Shy
+  module Enum
+    module ActiveRecordEnum
+      # The label of each member, e.g. `{ Status::InProgress => :in_progress }`:
+      # it names the generated methods and scopes, with `prefix:` and `suffix:`.
+      type labels = Hash[Base, Symbol]
+    end
+  end
+end

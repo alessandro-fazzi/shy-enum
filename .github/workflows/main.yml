@@ -23,5 +23,14 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
+    # `rake steep` installs the RBS collection (cloning ruby/gem_rbs_collection
+    # into ~/.cache/rbs): keep both across runs, until the lockfile changes.
+    - name: Cache the RBS collection
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/rbs
+          .gem_rbs_collection
+        key: rbs-collection-${{ hashFiles('rbs_collection.lock.yaml') }}
     - name: Run the default task
       run: bundle exec rake
