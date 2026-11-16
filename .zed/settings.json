@@ -1,0 +1,39 @@
+// Project-specific Zed settings
+{
+  "languages": {
+    "Ruby": {
+      "language_servers": ["ruby-lsp", "!solargraph", "!sorbet", "steep", "!rubocop", "codebook"]
+    }
+  },
+  "lsp": {
+    "ruby-lsp": {
+      "binary": {
+        "arguments": ["--beta"]
+      },
+      "initialization_options": {
+        "enabledFeatures": {
+          "codeActions": true,
+          "codeLens": true,
+          "completion": true,
+          "definition": true,
+          "diagnostics": true,
+          "documentHighlights": true,
+          "documentLink": true,
+          "documentSymbols": true,
+          "foldingRanges": true,
+          "formatting": true,
+          "hover": true,
+          "inlayHint": true,
+          "onTypeFormatting": false,
+          "selectionRanges": true,
+          "semanticHighlighting": true,
+          "signatureHelp": true,
+          "typeHierarchy": true,
+          "workspaceSymbol": true
+        },
+        "formatter": "auto",
+        "experimentalFeaturesEnabled": true
+      }
+    }
+  }
+}
